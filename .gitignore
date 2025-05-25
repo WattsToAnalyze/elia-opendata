@@ -1,3 +1,6 @@
+# Custom
+secrets.yml
+
 # Python
 __pycache__/
 *.py[cod]
