@@ -1,3 +1,7 @@
+![PyPI](https://img.shields.io/pypi/v/elia-opendata)
+![Build Status](https://github.com/WattsToAnalyze/elia-opendata/actions/workflows/python-release.yml/badge.svg)
+![License](https://img.shields.io/github/license/WattsToAnalyze/elia-opendata)
+
 # Elia OpenData Python Client
 
 A Python client for accessing the Elia Open Data Portal API. This client provides a simple interface to access Elia's energy data with support for easy data conversion to popular data science formats.
