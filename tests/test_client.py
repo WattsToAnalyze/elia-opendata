@@ -51,9 +51,20 @@ def test_get_catalog(client, mock_api):
     
     mock_response = [
         {
-            "dataset_id": "test_dataset",
-            "title": "Test Dataset",
-            "description": "Test description"
+            "dataset": {
+                "dataset_id": "ods032",
+                "metas": {
+                    "default": {
+                        "title": "Test Dataset",
+                        "description": "Test description",
+                        "theme": ["Test Theme"],
+                        "modified": "2024-01-01T00:00:00Z",
+                        "records_count": 1000
+                    }
+                },
+                "features": ["feature1"],
+                "fields": [{"name": "datetime"}, {"name": "measured"}]
+            }
         }
     ]
     
@@ -67,9 +78,15 @@ def test_get_catalog(client, mock_api):
     logger.debug("Making request to get catalog")
     catalog = client.get_catalog()
     
+    # Test proper parsing of nested dataset structure
+    entry = catalog[0]
     assert len(catalog) == 1
-    assert catalog[0].id == "test_dataset"
-    assert catalog[0].title == "Test Dataset"
+    assert entry.id == "ods032"
+    assert entry.title == "Test Dataset"
+    assert entry.description == "Test description"
+    assert entry.theme == ["Test Theme"]
+    assert len(entry.features) == 1
+    assert len(entry.fields) == 2
     logger.debug("Successfully retrieved catalog entries")
 
 @pytest.mark.usefixtures("mock_api")
@@ -77,11 +94,27 @@ def test_get_dataset(client, mock_api):
     """Test getting specific dataset metadata"""
     logger.info("Testing get_dataset method")
     
-    dataset_id = Dataset.SOLAR_GENERATION.value
+    dataset_id = Dataset.PV_PRODUCTION.value
     mock_response = {
-        "dataset_id": dataset_id,
-        "title": "Solar Generation",
-        "fields": []
+        "dataset": {
+            "dataset_id": dataset_id,
+            "metas": {
+                "default": {
+                    "title": "Photovoltaic Generation",
+                    "description": "Photovoltaic generation data",
+                    "theme": ["Generation"],
+                    "modified": "2024-01-01T00:00:00Z",
+                    "records_count": 1000
+                }
+            },
+            "features": ["daily", "monthly"],
+            "fields": [
+                {"name": "datetime"},
+                {"name": "measured"},
+                {"name": "loadfactor"},
+                {"name": "region"}
+            ]
+        }
     }
     
     mock_api.add(
@@ -92,10 +125,15 @@ def test_get_dataset(client, mock_api):
     )
     
     logger.debug(f"Requesting metadata for dataset: {dataset_id}")
-    metadata = client.get_dataset(Dataset.SOLAR_GENERATION)
+    metadata = client.get_dataset(Dataset.PV_PRODUCTION)
     
+    # Test proper parsing of nested metadata structure
     assert metadata.id == dataset_id
-    assert metadata.title == "Solar Generation"
+    assert metadata.title == "Photovoltaic Generation"
+    assert metadata.description == "Photovoltaic generation data"
+    assert metadata.theme == ["Generation"]
+    assert len(metadata.features) == 2
+    assert len(metadata.fields) == 4
     logger.debug("Successfully retrieved dataset metadata")
 
 @pytest.mark.usefixtures("mock_api")
@@ -141,13 +179,48 @@ def test_get_records(client, mock_api):
     """Test getting records from a dataset"""
     logger.info("Testing get_records method")
     
-    dataset_id = Dataset.SOLAR_GENERATION.value
+    dataset_id = Dataset.PV_PRODUCTION.value
     mock_response = {
         "total_count": 2,
         "records": [
-            {"id": 1, "value": 100},
-            {"id": 2, "value": 200}
+            {
+                "links": [
+                    {"rel": "self", "href": "https://opendata.elia.be/api/v2/catalog/datasets/ods032/records/18d60852ec0ddb577e67cd8437471670ea6e20e1"}
+                ],
+                "record": {
+                    "id": "record1",
+                    "timestamp": "2025-05-25T03:47:05.518Z",
+                    "size": 109,
+                    "fields": {
+                        "datetime": "2024-01-01T00:00:00Z",
+                        "resolutioncode": "PT15M",
+                        "region": "BE",
+                        "measured": 100,
+                        "loadfactor": 25.5,
+                        "monitoredcapacity": 358.348
+                    }
+                }
+            },
+            {
+                "links": [
+                    {"rel": "self", "href": "https://opendata.elia.be/api/v2/catalog/datasets/ods032/records/76995adf361eb810046c632c68f74cd89b6f4ed7"}
+                ],
+                "record": {
+                    "id": "record2",
+                    "timestamp": "2025-05-25T03:47:05.518Z",
+                    "size": 113,
+                    "fields": {
+                        "datetime": "2024-01-01T01:00:00Z",
+                        "resolutioncode": "PT15M",
+                        "region": "BE",
+                        "measured": 200,
+                        "loadfactor": 30.0,
+                        "monitoredcapacity": 2376.313
+                    }
+                }
+            }
         ],
+        "links": [{"rel": "self", "href": "current_page"}],
         "has_next": False
     }
     
@@ -159,7 +232,7 @@ def test_get_records(client, mock_api):
     )
     
     logger.debug(f"Requesting records for dataset: {dataset_id}")
-    records = client.get_records(Dataset.SOLAR_GENERATION, limit=2)
+    records = client.get_records(Dataset.PV_PRODUCTION, limit=2)
     
     assert records.total_count == 2
     assert len(records.records) == 2
@@ -171,17 +244,51 @@ def test_iter_records(client, mock_api):
     """Test iterating through records"""
     logger.info("Testing iter_records method")
     
-    dataset_id = Dataset.SOLAR_GENERATION.value
+    dataset_id = Dataset.PV_PRODUCTION.value
     mock_responses = [
         {
             "total_count": 4,
-            "records": [{"id": 1}, {"id": 2}],
+            "records": [
+                {
+                    "record": {
+                        "fields": {
+                            "datetime": "2024-01-01T00:00:00Z",
+                            "measured": 100
+                        }
+                    }
+                },
+                {
+                    "record": {
+                        "fields": {
+                            "datetime": "2024-01-01T01:00:00Z",
+                            "measured": 200
+                        }
+                    }
+                }
+            ],
             "links": [{"rel": "next"}],
             "has_next": True
         },
         {
             "total_count": 4,
-            "records": [{"id": 3}, {"id": 4}],
+            "records": [
+                {
+                    "record": {
+                        "fields": {
+                            "datetime": "2024-01-01T02:00:00Z",
+                            "measured": 300
+                        }
+                    }
+                },
+                {
+                    "record": {
+                        "fields": {
+                            "datetime": "2024-01-01T03:00:00Z",
+                            "measured": 400
+                        }
+                    }
+                }
+            ],
             "links": [],
             "has_next": False
         }
@@ -205,11 +312,11 @@ def test_iter_records(client, mock_api):
     
     logger.debug(f"Requesting record batches for dataset: {dataset_id}")
     all_records = []
-    for batch in client.iter_records(Dataset.SOLAR_GENERATION, batch_size=2):
+    for batch in client.iter_records(Dataset.PV_PRODUCTION, batch_size=2):
         all_records.extend(batch.records)
         
     assert len(all_records) == 4
-    assert [r["id"] for r in all_records] == [1, 2, 3, 4]
+    assert [r["record"]["fields"]["measured"] for r in all_records] == [100, 200, 300, 400]
     logger.debug("Successfully retrieved all record batches")
 
 @pytest.mark.usefixtures("mock_api")
@@ -219,9 +326,19 @@ def test_search_catalog(client, mock_api):
     
     mock_response = [
         {
-            "dataset_id": "solar_test",
-            "title": "Solar Test Dataset",
-            "description": "Test solar data"
+            "dataset": {
+                "dataset_id": "solar_test",
+                "metas": {
+                    "default": {
+                        "title": "Solar Test Dataset",
+                        "description": "Test solar data",
+                        "theme": ["Generation"],
+                        "modified": "2024-01-01T00:00:00Z"
+                    }
+                },
+                "features": ["daily"],
+                "fields": [{"name": "measured"}]
+            }
         }
     ]
     
@@ -236,8 +353,12 @@ def test_search_catalog(client, mock_api):
     results = client.search_catalog("solar")
     
     assert len(results) == 1
-    assert results[0].id == "solar_test"
-    assert results[0].title == "Solar Test Dataset"
+    result = results[0]
+    assert result.id == "solar_test"
+    assert result.title == "Solar Test Dataset"
+    assert result.theme == ["Generation"]
+    assert len(result.features) == 1
+    assert len(result.fields) == 1
     logger.debug("Successfully retrieved search results")
 
 @pytest.mark.usefixtures("mock_api")
@@ -264,15 +385,49 @@ def test_get_dataset_between(client, mock_api):
     """Test getting dataset records between two dates"""
     logger.info("Testing get_dataset_between method")
     
-    dataset_id = Dataset.SOLAR_GENERATION.value
+    dataset_id = Dataset.PV_PRODUCTION.value
     start_date = "2024-01-01"
     end_date = "2024-01-31"
     
     mock_response = {
         "total_count": 2,
         "records": [
-            {"id": 1, "datetime": "2024-01-15T12:00:00", "value": 100},
-            {"id": 2, "datetime": "2024-01-16T12:00:00", "value": 200}
+            {
+                "links": [
+                    {"rel": "self", "href": "https://opendata.elia.be/api/v2/catalog/datasets/ods032/records/date_test_1"}
+                ],
+                "record": {
+                    "id": "date_test_1",
+                    "timestamp": "2025-05-25T03:47:05.518Z",
+                    "size": 109,
+                    "fields": {
+                        "datetime": "2024-01-15T12:00:00+00:00",
+                        "resolutioncode": "PT15M",
+                        "region": "BE",
+                        "measured": 100,
+                        "loadfactor": 25.5,
+                        "monitoredcapacity": 358.348
+                    }
+                }
+            },
+            {
+                "links": [
+                    {"rel": "self", "href": "https://opendata.elia.be/api/v2/catalog/datasets/ods032/records/date_test_2"}
+                ],
+                "record": {
+                    "id": "date_test_2",
+                    "timestamp": "2025-05-25T03:47:05.518Z",
+                    "size": 113,
+                    "fields": {
+                        "datetime": "2024-01-16T12:00:00+00:00",
+                        "resolutioncode": "PT15M",
+                        "region": "BE",
+                        "measured": 200,
+                        "loadfactor": 30.0,
+                        "monitoredcapacity": 2376.313
+                    }
+                }
+            }
         ],
         "has_next": False
     }
@@ -281,9 +436,12 @@ def test_get_dataset_between(client, mock_api):
     expected_where = f"datetime >= '{start_date}' AND datetime <= '{end_date}'"
     
     def match_query_params(request):
-        params = requests.utils.parse_qs(request.url.split('?')[1])
-        assert params.get('where', [None])[0] == expected_where
-        return True
+        from urllib.parse import parse_qs, urlparse
+        query = urlparse(request.url).query
+        params = parse_qs(query)
+        valid = params.get('where', [None])[0] == expected_where
+        reason = "where parameter does not match expected value" if not valid else ""
+        return valid, reason
     
     mock_api.add(
         responses.GET,
@@ -295,14 +453,14 @@ def test_get_dataset_between(client, mock_api):
     
     logger.debug(f"Requesting records for dataset {dataset_id} between {start_date} and {end_date}")
     records = client.get_dataset_between(
-        Dataset.SOLAR_GENERATION,
+        Dataset.PV_PRODUCTION,
         start_date=start_date,
         end_date=end_date
     )
     
     assert records.total_count == 2
     assert len(records.records) == 2
-    assert all('datetime' in record for record in records.records)
-    assert all(start_date <= record['datetime'].split('T')[0] <= end_date
+    assert all('datetime' in record['record']['fields'] for record in records.records)
+    assert all(start_date <= record['record']['fields']['datetime'].split('T')[0] <= end_date
               for record in records.records)
     logger.debug("Successfully retrieved date-filtered records")

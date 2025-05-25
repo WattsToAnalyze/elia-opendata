@@ -133,7 +133,7 @@ class EliaClient:
         # Correct extraction of dataset list from API response (use 'datasets' key)
         items = data.get('datasets', []) if isinstance(data, dict) else data
         # Pass only the 'dataset' dict to CatalogEntry
-        entries = [CatalogEntry(item["dataset"]) for item in items if "dataset" in item]
+        entries = [CatalogEntry(item) for item in items if "dataset" in item]
         logger.debug(f"Retrieved {len(entries)} catalog entries")
         return entries
 

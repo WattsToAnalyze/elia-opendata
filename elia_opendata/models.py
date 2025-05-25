@@ -79,16 +79,27 @@ class CatalogEntry(BaseModel):
     
     def __init__(self, data: Dict[str, Any]):
         super().__init__(data)
-        self.id: str = data.get("dataset_id", "")
-        # Try to get title from metas['default']['title'] if present, else fallback to top-level 'title'
-        metas = data.get("metas", {})
+        
+        # Extract dataset part
+        dataset = data.get("dataset", {}) if "dataset" in data else data
+        self.id = dataset.get("dataset_id", "")
+        
+        # Get metadata from default.metas
+        metas = dataset.get("metas", {})
         default_meta = metas.get("default", {}) if isinstance(metas, dict) else {}
-        self.title: str = default_meta.get("title") or data.get("title", "")
-        self.description: str = default_meta.get("description") or data.get("description", "")
-        self.theme: str = default_meta.get("theme") or data.get("theme", "")
+        
+        # Set attributes from default_meta or fallback to top-level
+        self.title = default_meta.get("title", dataset.get("title", ""))
+        self.description = default_meta.get("description", dataset.get("description", ""))
+        self.theme = default_meta.get("theme", dataset.get("theme", []))
+        
+        # Set other attributes
+        self.features = dataset.get("features", [])
+        self.fields = dataset.get("fields", [])
+        self.theme: List[str] = default_meta.get("theme", [])
         self.modified: Optional[datetime] = None
-        self.features: List[str] = data.get("features", [])
-        self.name: str = data.get("name", "")
+        self.features: List[str] = dataset.get("features", [])
+        self.fields: List[Dict] = dataset.get("fields", [])
         if modified := default_meta.get("modified") or data.get("modified"):
             try:
                 self.modified = datetime.fromisoformat(modified.replace("Z", "+00:00"))
@@ -103,35 +114,27 @@ class DatasetMetadata(BaseModel):
     
     def __init__(self, data: Dict[str, Any]):
         super().__init__(data)
-        dataset = data.get("dataset")
-        if dataset:
-            self.id: str = dataset.get("dataset_id", "")
-            self.title: str = dataset.get("title", "")
-            self.description: str = dataset.get("description", "")
-            self.theme: str = dataset.get("theme", "")
-            self.modified: Optional[datetime] = None
-            self.features: List[str] = dataset.get("features", [])
-            self.fields: List[Dict] = dataset.get("fields", [])
-            self.attachments: List[Dict] = dataset.get("attachments", [])
-            if modified := dataset.get("modified"):
-                try:
-                    self.modified = datetime.fromisoformat(modified.replace("Z", "+00:00"))
-                except (ValueError, AttributeError):
-                    pass
-        else:
-            self.id: str = data.get("dataset_id", "")
-            self.title: str = data.get("title", "")
-            self.description: str = data.get("description", "")
-            self.theme: str = data.get("theme", "")
-            self.modified: Optional[datetime] = None
-            self.features: List[str] = data.get("features", [])
-            self.fields: List[Dict] = data.get("fields", [])
-            self.attachments: List[Dict] = data.get("attachments", [])
-            if modified := data.get("modified"):
-                try:
-                    self.modified = datetime.fromisoformat(modified.replace("Z", "+00:00"))
-                except (ValueError, AttributeError):
-                    pass
+        dataset = data.get("dataset", {})
+        self.id: str = dataset.get("dataset_id", "")
+        
+        # Get metadata from dataset.metas.default structure
+        metas = dataset.get("metas", {})
+        default_meta = metas.get("default", {}) if isinstance(metas, dict) else {}
+        
+        self.title: str = default_meta.get("title", "")
+        self.description: str = default_meta.get("description", "")
+        self.theme: List[str] = default_meta.get("theme", [])
+        self.modified: Optional[datetime] = None
+        
+        self.features: List[str] = dataset.get("features", [])
+        self.fields: List[Dict] = dataset.get("fields", [])
+        self.attachments: List[Dict] = dataset.get("attachments", [])
+        
+        if modified := default_meta.get("modified"):
+            try:
+                self.modified = datetime.fromisoformat(modified.replace("Z", "+00:00"))
+            except (ValueError, AttributeError):
+                pass
 
 class Records(BaseModel):
     """
