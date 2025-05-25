@@ -164,6 +164,50 @@ def test_dataset_between_dates(client):
         
     return records
 
+def test_data_conversions(client):
+    """Test converting records to different data formats"""
+    logger.info("Testing data conversions with solar generation data...")
+    
+    try:
+        # Get 5 records from January 2024
+        records = client.get_dataset_between(
+            Dataset.PV_PRODUCTION,
+            start_date="2024-01-01",
+            end_date="2024-01-01",
+            limit=5
+        )
+        
+        logger.info(f"\nRetrieved {len(records.records)} records")
+        logger.info("\n1. Original Records:")
+        for i, record_wrapper in enumerate(records.records):
+            fields = record_wrapper['record']['fields']
+            logger.info(f"Record {i+1}: Region={fields['region']}, Measured={fields['measured']}MW")
+        
+        logger.info("\n2. Pandas DataFrame:")
+        df = records.to_pandas()
+        logger.info("\nColumns:")
+        logger.info(df.columns.tolist())
+        logger.info("\nFirst 5 rows:")
+        logger.info(df[['region', 'measured', 'datetime', 'loadfactor']].head())
+        
+        logger.info("\n3. Polars DataFrame:")
+        pl_df = records.to_polars()
+        logger.info("\nSchema:")
+        logger.info(pl_df.schema)
+        logger.info("\nFirst 5 rows:")
+        logger.info(pl_df.select(['region', 'measured', 'datetime', 'loadfactor']).head())
+        
+        logger.info("\n4. Numpy Array:")
+        np_arr = records.to_numpy()
+        logger.info("\nShape:")
+        logger.info(np_arr.shape)
+        logger.info("\nSample data (first row):")
+        logger.info(np_arr[0])
+        
+    except Exception as e:
+        logger.error(f"Failed to test conversions: {e}")
+        logger.debug("Error details:", exc_info=True)
+
 def run_test(test_name):
     """Run a specific test by name"""
     try:
@@ -184,6 +228,9 @@ def run_test(test_name):
         elif test_name == "between":
             client = test_client_initialization()
             test_dataset_between_dates(client)
+        elif test_name == "convert":
+            client = test_client_initialization()
+            test_data_conversions(client)
         else:
             logger.error(f"Unknown test: {test_name}")
             return
@@ -200,10 +247,10 @@ def run_test(test_name):
 
 def main():
     parser = argparse.ArgumentParser(description='Run Elia OpenData API tests')
-    parser.add_argument('test', choices=['init', 'catalog', 'solar', 'search', 'between'],
+    parser.add_argument('test', choices=['init', 'catalog', 'solar', 'search', 'between', 'convert'],
                       help='Test to run: init (client initialization), catalog (fetch catalog), '
                            'solar (solar dataset), search (search datasets), '
-                           'between (get data between dates)')
+                           'between (get data between dates), convert (test data conversions)')
     
     args = parser.parse_args()
     run_test(args.test)

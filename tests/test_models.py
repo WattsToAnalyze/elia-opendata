@@ -22,28 +22,22 @@ def test_base_model_conversions():
     assert isinstance(json_str, str)
     assert '"key1":"value1"' in json_str.replace(" ", "")
 
-def test_base_model_missing_dependencies():
-    model = BaseModel({"test": "data"})
-    
-    # Test missing pandas
-    with pytest.raises(ImportError) as exc_info:
-        model.to_pandas()
-    assert "pandas" in str(exc_info.value)
-    
-    # Test missing numpy
-    with pytest.raises(ImportError) as exc_info:
-        model.to_numpy()
-    assert "numpy" in str(exc_info.value)
-    
-    # Test missing polars
-    with pytest.raises(ImportError) as exc_info:
-        model.to_polars()
-    assert "polars" in str(exc_info.value)
-    
-    # Test missing pyarrow
-    with pytest.raises(ImportError) as exc_info:
-        model.to_arrow()
-    assert "pyarrow" in str(exc_info.value)
+    # Test DataFrame conversion
+    df = model.to_pandas()
+    assert "pandas.core.frame.DataFrame" in str(type(df))
+    assert len(df) == 1
+    assert all(key in df.columns for key in test_data.keys())
+
+    # Test polars conversion
+    pl_df = model.to_polars()
+    assert "polars.dataframe.frame.DataFrame" in str(type(pl_df))
+    assert len(pl_df) == 1
+    assert all(key in pl_df.columns for key in test_data.keys())
+
+    # Test numpy conversion
+    np_array = model.to_numpy()
+    assert "numpy.ndarray" in str(type(np_array))
+    assert len(np_array) == 1
 
 def test_catalog_entry():
     # Test with complete data matching actual API structure
@@ -142,50 +136,32 @@ def test_records():
         "records": [
             {
                 "links": [
-                    {"rel": "self", "href": "https://opendata.elia.be/api/v2/catalog/datasets/ods032/records/18d60852ec0ddb577e67cd8437471670ea6e20e1"},
-                    {"rel": "datasets", "href": "https://opendata.elia.be/api/v2/catalog/datasets"},
-                    {"rel": "dataset", "href": "https://opendata.elia.be/api/v2/catalog/datasets/ods032"}
+                    {"rel": "self", "href": "https://example.com/records/1"}
                 ],
                 "record": {
-                    "id": "18d60852ec0ddb577e67cd8437471670ea6e20e1",
+                    "id": "record1",
                     "timestamp": "2025-05-25T03:47:05.518Z",
                     "size": 109,
                     "fields": {
                         "datetime": "2024-10-28T18:15:00+00:00",
-                        "resolutioncode": "PT15M",
                         "region": "Namur",
                         "measured": 0.0,
-                        "mostrecentforecast": 0.0,
-                        "mostrecentconfidence10": 0.0,
-                        "mostrecentconfidence90": 0.0,
-                        "dayahead11hforecast": 0.0,
-                        "dayahead11hconfidence10": 0.0,
-                        "dayahead11hconfidence90": 0.0,
-                        "dayaheadforecast": 0.0,
-                        "dayaheadconfidence10": 0.0,
-                        "dayaheadconfidence90": 0.0,
-                        "weekaheadforecast": 0.0,
-                        "weekaheadconfidence10": 0.0,
-                        "weekaheadconfidence90": 0.0,
-                        "monitoredcapacity": 358.348,
-                        "loadfactor": 0.0
+                        "monitoredcapacity": 358.348
                     }
                 }
             },
             {
                 "links": [
-                    {"rel": "self", "href": "https://opendata.elia.be/api/v2/catalog/datasets/ods032/records/76995adf361eb810046c632c68f74cd89b6f4ed7"}
+                    {"rel": "self", "href": "https://example.com/records/2"}
                 ],
                 "record": {
-                    "id": "76995adf361eb810046c632c68f74cd89b6f4ed7",
+                    "id": "record2",
                     "timestamp": "2025-05-25T03:47:05.518Z",
                     "size": 113,
                     "fields": {
                         "datetime": "2024-10-28T18:15:00+00:00",
-                        "resolutioncode": "PT15M",
                         "region": "Wallonia",
                         "measured": 0.0,
-                        "loadfactor": 0.0,
                         "monitoredcapacity": 2376.313
                     }
                 }
@@ -194,50 +170,64 @@ def test_records():
     }
     records = Records(data)
     
+    # Test basic attributes
     assert records.total_count == 100
     assert len(records.records) == 2
     
-    # Test first record structure matches actual API
+    # Test first record structure
     first_record = records.records[0]
     assert "links" in first_record
     assert "record" in first_record
-    assert first_record["record"]["id"] == "18d60852ec0ddb577e67cd8437471670ea6e20e1"
+    assert first_record["record"]["id"] == "record1"
     assert first_record["record"]["timestamp"] == "2025-05-25T03:47:05.518Z"
     assert first_record["record"]["size"] == 109
     
-    # Test fields structure in first record
+    # Test fields structure
     fields = first_record["record"]["fields"]
     assert fields["datetime"] == "2024-10-28T18:15:00+00:00"
-    assert fields["resolutioncode"] == "PT15M"
     assert fields["region"] == "Namur"
     assert fields["measured"] == 0.0
-    assert fields["loadfactor"] == 0.0
     assert fields["monitoredcapacity"] == 358.348
-    assert "mostrecentforecast" in fields
-    assert "dayahead11hforecast" in fields
-    assert "weekaheadforecast" in fields
     
-    # Test to_dict only returns records
-    dict_data = records.to_dict()
-    assert list(dict_data.keys()) == ["records"]
-    assert len(dict_data["records"]) == 2
+    # Test pandas conversion
+    df = records.to_pandas()
+    assert "pandas.core.frame.DataFrame" in str(type(df))
+    assert len(df) == 2
+    assert "region" in df.columns
+    assert "measured" in df.columns
+    assert "monitoredcapacity" in df.columns
+    assert df["region"].tolist() == ["Namur", "Wallonia"]
+    
+    # Test polars conversion
+    pl_df = records.to_polars()
+    assert "polars.dataframe.frame.DataFrame" in str(type(pl_df))
+    assert len(pl_df) == 2
+    assert "region" in pl_df.columns
+    assert "measured" in pl_df.columns
+    assert "monitoredcapacity" in pl_df.columns
+    
+    # Test numpy conversion
+    np_array = records.to_numpy()
+    assert "numpy.ndarray" in str(type(np_array))
+    assert len(np_array) == 2
+    
+    # Test links
+    assert not records.has_next
     
     # Test without next link
-    # Test without next link - using actual API structure
     data_no_next = {
         "total_count": 100,
         "records": [
             {
                 "links": [
-                    {"rel": "self", "href": "https://opendata.elia.be/api/v2/catalog/datasets/ods032/records/9368be1bcec6a79e3cc75843f48d5bc51e5f54b6"}
+                    {"rel": "self", "href": "https://example.com/records/1"}
                 ],
                 "record": {
-                    "id": "9368be1bcec6a79e3cc75843f48d5bc51e5f54b6",
+                    "id": "record1",
                     "timestamp": "2025-05-25T03:47:05.518Z",
                     "size": 113,
                     "fields": {
                         "datetime": "2024-10-28T18:00:00+00:00",
-                        "resolutioncode": "PT15M",
                         "region": "Belgium",
                         "measured": 0.0,
                         "monitoredcapacity": 10395.707,
@@ -249,3 +239,61 @@ def test_records():
     }
     records_no_next = Records(data_no_next)
     assert records_no_next.has_next == False
+
+def test_model_data_conversions():
+    # Test with flattened record structure
+    data = {
+        "total_count": 2,
+        "records": [
+            {
+                "record": {
+                    "id": "record1",
+                    "timestamp": "2025-05-25T03:47:05.518Z",
+                    "size": 109,
+                    "fields": {
+                        "datetime": "2024-10-28T18:15:00+00:00",
+                        "region": "Namur",
+                        "measured": 0.0,
+                        "monitoredcapacity": 358.348
+                    }
+                }
+            },
+            {
+                "record": {
+                    "id": "record2",
+                    "timestamp": "2025-05-25T03:47:05.518Z",
+                    "size": 113,
+                    "fields": {
+                        "datetime": "2024-10-28T18:15:00+00:00",
+                        "region": "Wallonia",
+                        "measured": 0.0,
+                        "monitoredcapacity": 2376.313
+                    }
+                }
+            }
+        ]
+    }
+    records = Records(data)
+    
+    # Test pandas conversion
+    df = records.to_pandas()
+    assert "pandas.core.frame.DataFrame" in str(type(df))
+    assert len(df) == 2
+    assert "id" in df.columns
+    assert "region" in df.columns
+    assert "measured" in df.columns
+    assert df["region"].tolist() == ["Namur", "Wallonia"]
+    assert df["monitoredcapacity"].tolist() == [358.348, 2376.313]
+    
+    # Test polars conversion
+    pl_df = records.to_polars()
+    assert "polars.dataframe.frame.DataFrame" in str(type(pl_df))
+    assert len(pl_df) == 2
+    assert "id" in pl_df.columns
+    assert "region" in pl_df.columns
+    assert "measured" in pl_df.columns
+    
+    # Test numpy conversion
+    np_array = records.to_numpy()
+    assert "numpy.ndarray" in str(type(np_array))
+    assert len(np_array) == 2

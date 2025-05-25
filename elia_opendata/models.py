@@ -54,18 +54,22 @@ class BaseModel:
     def to_pandas(self):
         """Convert the model to a pandas DataFrame."""
         pd = self._ensure_dependencies("pandas")
-        return pd.DataFrame(self.to_dict())
+        return pd.DataFrame([self.to_dict()])
     
     def to_numpy(self):
         """Convert the model to a numpy array."""
         np = self._ensure_dependencies("numpy")
-        return np.array(self.to_dict())
+        pd = self._ensure_dependencies("pandas")
+        df = pd.DataFrame([self.to_dict()])
+        return df.to_numpy()
     
     def to_polars(self):
         """Convert the model to a polars DataFrame."""
         pl = self._ensure_dependencies("polars")
-        return pl.DataFrame(self.to_dict())
-    
+        pd = self._ensure_dependencies("pandas")
+        df = pd.DataFrame([self.to_dict()])
+        return pl.from_pandas(df)
+
     def to_arrow(self):
         """Convert the model to an Arrow table."""
         pa = self._ensure_dependencies("pyarrow")
@@ -151,6 +155,41 @@ class Records(BaseModel):
     def to_dict(self) -> Dict[str, Any]:
         """Convert only the records to a dictionary."""
         return {"records": self.records}
+
+    def _flatten_records(self) -> List[Dict[str, Any]]:
+        """Flatten the nested records structure for data conversion."""
+        flattened = []
+        for record in self.records:
+            if isinstance(record, dict) and "record" in record:
+                record_data = record["record"]
+                fields = record_data.get("fields", {})
+                flat_record = {
+                    "id": record_data.get("id", ""),
+                    "timestamp": record_data.get("timestamp", ""),
+                    "size": record_data.get("size", 0),
+                    **fields
+                }
+                flattened.append(flat_record)
+        return flattened
+    
+    def to_pandas(self):
+        """Convert records to a pandas DataFrame with flattened structure."""
+        pd = self._ensure_dependencies("pandas")
+        flattened_records = self._flatten_records()
+        return pd.DataFrame(flattened_records)
+    
+    def to_numpy(self):
+        """Convert records to a numpy array with flattened structure."""
+        np = self._ensure_dependencies("numpy")
+        pd = self._ensure_dependencies("pandas")
+        df = self.to_pandas()
+        return df.to_numpy()
+    
+    def to_polars(self):
+        """Convert records to a polars DataFrame with flattened structure."""
+        pl = self._ensure_dependencies("polars")
+        flattened_records = self._flatten_records()
+        return pl.DataFrame(flattened_records)
     
     @property
     def has_next(self) -> bool:
