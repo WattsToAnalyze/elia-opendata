@@ -214,7 +214,10 @@ def run_test(test_name):
         client = None
         catalog = None
         
-        if test_name == "init":
+        if test_name == "validation":
+            client = test_client_initialization()
+            test_validation_error(client)
+        elif test_name == "init":
             client = test_client_initialization()
         elif test_name == "catalog":
             client = test_client_initialization()
@@ -245,12 +248,29 @@ def run_test(test_name):
         logger.error(f"Unexpected error occurred: {str(e)}")
         logger.debug("Exception details:", exc_info=True)
 
+def test_validation_error(client):
+    """Test handling of validation error with large limit"""
+    logger.info("Testing API validation error with large limit...")
+    try:
+        records = client.get_dataset_between(
+            Dataset.PV_PRODUCTION,
+            start_date="2024-01-01",
+            end_date="2024-01-31",
+            limit=10000  # Using large limit to trigger validation error
+        )
+    except APIError as e:
+        logger.info(f"Successfully caught validation error: {str(e)}")
+        return True
+    logger.error("Expected validation error was not raised")
+    return False
+
 def main():
     parser = argparse.ArgumentParser(description='Run Elia OpenData API tests')
-    parser.add_argument('test', choices=['init', 'catalog', 'solar', 'search', 'between', 'convert'],
+    parser.add_argument('test', choices=['init', 'catalog', 'solar', 'search', 'between', 'convert', 'validation'],
                       help='Test to run: init (client initialization), catalog (fetch catalog), '
                            'solar (solar dataset), search (search datasets), '
-                           'between (get data between dates), convert (test data conversions)')
+                           'between (get data between dates), convert (test data conversions), '
+                           'validation (test validation error)')
     
     args = parser.parse_args()
     run_test(args.test)
