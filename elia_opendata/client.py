@@ -16,6 +16,7 @@ from .error import (
     APIError,
     ValidationError,
     ConnectionError,
+    ODSQLError,
 )
 
 # Configure logging
@@ -32,6 +33,15 @@ class EliaClient:
         >>> catalog = client.get_catalog()
         >>> # Get specific dataset using enum
         >>> data = client.get_records(Dataset.SOLAR_GENERATION)
+
+    Error handling:
+        >>> try:
+        ...     client.get_records(Dataset.SOLAR_GENERATION, where="invalid_function()")
+        ... except ODSQLError as e:
+        ...     print(f"Query error: {e.message}")  # Query error: ODSQL query is malformed...
+        ... except RateLimitError as e:
+        ...     print(f"Rate limit exceeded. Reset at {e.reset_time}")
+        ...     print(f"Limit: {e.call_limit} calls per {e.limit_time_unit}")
     """
     
     BASE_URL = "https://opendata.elia.be/api/v2/"
@@ -98,17 +108,31 @@ class EliaClient:
             return response.json()
             
         except requests.exceptions.HTTPError as e:
+            error_response = e.response.json() if e.response.content else {}
+            
             if e.response.status_code == 429:
                 logger.error("API rate limit exceeded")
-                raise RateLimitError("API rate limit exceeded", response=e.response)
+                raise RateLimitError(
+                    message=error_response.get('error', "API rate limit exceeded"),
+                    call_limit=error_response.get('call_limit'),
+                    reset_time=error_response.get('reset_time'),
+                    limit_time_unit=error_response.get('limit_time_unit'),
+                    response=e.response
+                )
             elif e.response.status_code == 401:
                 logger.error("Authentication failed - invalid or missing API key")
                 raise AuthError("Authentication failed", response=e.response)
+            elif e.response.status_code == 400 and error_response.get('error_code') == 'ODSQLError':
+                logger.error(f"ODSQL Error: {error_response.get('message')}")
+                raise ODSQLError(
+                    message=error_response.get('message', "ODSQL query is malformed"),
+                    response=e.response
+                )
             else:
                 logger.error(f"API request failed with status {e.response.status_code}: {str(e)}")
                 raise APIError(
-                    f"API request failed: {str(e)}",
-                    error_code=e.response.status_code,
+                    message=error_response.get('message', f"API request failed: {str(e)}"),
+                    error_code=error_response.get('error_code', str(e.response.status_code)),
                     response=e.response
                 )
         except requests.exceptions.RequestException as e:
