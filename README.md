@@ -5,7 +5,7 @@ A Python client for accessing the Elia Open Data Portal API. This client provide
 ## Installation
 
 ```bash
-pip install elia-opendata
+pip install elia_opendata
 ```
 
 ## Usage
@@ -24,11 +24,15 @@ for entry in catalog:
     print(f"Dataset: {entry.title} (ID: {entry.id})")
 
 # Get dataset metadata using enum
-solar_metadata = client.get_dataset(Dataset.SOLAR_GENERATION)
-print(f"Solar data fields: {solar_metadata.fields}")
+solar_metadata = client.get_dataset(Dataset.PV_PRODUCTION)
+# print(f"Solar data fields: {solar_metadata.fields}")
 
 # Get records from a dataset
-solar_data = client.get_records(Dataset.SOLAR_GENERATION, limit=100)
+solar_data = client.get_records(Dataset.PV_PRODUCTION, limit=100)
+print(solar_data)
+print("First 5 solar records:")
+for record in getattr(solar_data, 'records', [])[:5]:
+    print(record)
 
 # Convert to different formats
 df = solar_data.to_pandas()  # Convert to pandas DataFrame

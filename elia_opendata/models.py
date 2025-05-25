@@ -103,20 +103,35 @@ class DatasetMetadata(BaseModel):
     
     def __init__(self, data: Dict[str, Any]):
         super().__init__(data)
-        self.id: str = data.get("dataset_id", "")
-        self.title: str = data.get("title", "")
-        self.description: str = data.get("description", "")
-        self.theme: str = data.get("theme", "")
-        self.modified: Optional[datetime] = None
-        self.features: List[str] = data.get("features", [])
-        self.fields: List[Dict] = data.get("fields", [])
-        self.attachments: List[Dict] = data.get("attachments", [])
-        
-        if modified := data.get("modified"):
-            try:
-                self.modified = datetime.fromisoformat(modified.replace("Z", "+00:00"))
-            except (ValueError, AttributeError):
-                pass
+        dataset = data.get("dataset")
+        if dataset:
+            self.id: str = dataset.get("dataset_id", "")
+            self.title: str = dataset.get("title", "")
+            self.description: str = dataset.get("description", "")
+            self.theme: str = dataset.get("theme", "")
+            self.modified: Optional[datetime] = None
+            self.features: List[str] = dataset.get("features", [])
+            self.fields: List[Dict] = dataset.get("fields", [])
+            self.attachments: List[Dict] = dataset.get("attachments", [])
+            if modified := dataset.get("modified"):
+                try:
+                    self.modified = datetime.fromisoformat(modified.replace("Z", "+00:00"))
+                except (ValueError, AttributeError):
+                    pass
+        else:
+            self.id: str = data.get("dataset_id", "")
+            self.title: str = data.get("title", "")
+            self.description: str = data.get("description", "")
+            self.theme: str = data.get("theme", "")
+            self.modified: Optional[datetime] = None
+            self.features: List[str] = data.get("features", [])
+            self.fields: List[Dict] = data.get("fields", [])
+            self.attachments: List[Dict] = data.get("attachments", [])
+            if modified := data.get("modified"):
+                try:
+                    self.modified = datetime.fromisoformat(modified.replace("Z", "+00:00"))
+                except (ValueError, AttributeError):
+                    pass
 
 class Records(BaseModel):
     """
