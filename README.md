@@ -5,7 +5,7 @@ A Python client for accessing the Elia Open Data Portal API. This client provide
 ## Installation
 
 ```bash
-pip install elia_opendata
+pip install elia-opendata
 ```
 
 ## Usage
