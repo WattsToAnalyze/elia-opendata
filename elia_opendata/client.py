@@ -262,3 +262,42 @@ class EliaClient:
         """
         params = {"q": query, **kwargs}
         return self._make_request("GET", "catalog/datasets/search", params=params)
+
+    def get_dataset_between(
+        self,
+        dataset: Union[Dataset, str],
+        start_date: str,
+        end_date: str,
+        **kwargs
+    ) -> Records:
+        """
+        Get dataset records between two dates.
+        
+        Args:
+            dataset: Dataset enum or ID string
+            start_date: Start date in ISO format (YYYY-MM-DD)
+            end_date: End date in ISO format (YYYY-MM-DD)
+            **kwargs: Additional query parameters
+            
+        Returns:
+            Records object containing the filtered dataset records
+            
+        Example:
+            >>> client = EliaClient()
+            >>> data = client.get_dataset_between(
+            ...     Dataset.SOLAR_GENERATION,
+            ...     start_date="2024-01-01",
+            ...     end_date="2024-01-31"
+            ... )
+        """
+        # Build the date filter condition
+        where_condition = f"datetime >= '{start_date}' AND datetime <= '{end_date}'"
+        
+        # If there's an existing where condition in kwargs, combine them
+        if "where" in kwargs:
+            kwargs["where"] = f"({kwargs['where']}) AND ({where_condition})"
+        else:
+            kwargs["where"] = where_condition
+            
+        logger.info(f"Fetching records for dataset {dataset} between {start_date} and {end_date}")
+        return self.get_records(dataset, **kwargs)

@@ -134,6 +134,36 @@ def test_dataset_search(client):
 
     return found_datasets
 
+def test_dataset_between_dates(client):
+    """Test getting dataset records between specific dates"""
+    logger.info("Fetching solar generation data between dates...")
+    
+    try:
+        # Get data for January 2024
+        records = client.get_dataset_between(
+            Dataset.PV_PRODUCTION,
+            start_date="2024-01-01",
+            end_date="2024-01-31"
+        )
+        
+        logger.info(f"Retrieved {records.total_count} records")
+        
+        # Display first few records
+        for i, record_wrapper in enumerate(records.records[:5]):
+            logger.info(f"Record {i+1}:")
+            fields = record_wrapper['record']['fields']
+            logger.info(f"- Datetime: {fields['datetime']}")
+            logger.info(f"- Region: {fields['region']}")
+            logger.info(f"- Measured Value: {fields['measured']} MW")
+            logger.info(f"- Load Factor: {fields['loadfactor']}%")
+            logger.info("-" * 40)
+            
+    except Exception as e:
+        logger.error(f"Failed to fetch data: {e}")
+        logger.debug("Error details:", exc_info=True)
+        
+    return records
+
 def run_test(test_name):
     """Run a specific test by name"""
     try:
@@ -151,6 +181,9 @@ def run_test(test_name):
         elif test_name == "search":
             client = test_client_initialization()
             test_dataset_search(client)
+        elif test_name == "between":
+            client = test_client_initialization()
+            test_dataset_between_dates(client)
         else:
             logger.error(f"Unknown test: {test_name}")
             return
@@ -167,9 +200,10 @@ def run_test(test_name):
 
 def main():
     parser = argparse.ArgumentParser(description='Run Elia OpenData API tests')
-    parser.add_argument('test', choices=['init', 'catalog', 'solar', 'search'],
+    parser.add_argument('test', choices=['init', 'catalog', 'solar', 'search', 'between'],
                       help='Test to run: init (client initialization), catalog (fetch catalog), '
-                           'solar (solar dataset), search (search datasets)')
+                           'solar (solar dataset), search (search datasets), '
+                           'between (get data between dates)')
     
     args = parser.parse_args()
     run_test(args.test)

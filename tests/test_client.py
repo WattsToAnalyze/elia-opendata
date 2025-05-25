@@ -258,3 +258,51 @@ def test_connection_error(client, mock_api):
     
     assert "Connection failed" in str(exc_info.value)
     logger.debug("Successfully caught connection error")
+
+@pytest.mark.usefixtures("mock_api")
+def test_get_dataset_between(client, mock_api):
+    """Test getting dataset records between two dates"""
+    logger.info("Testing get_dataset_between method")
+    
+    dataset_id = Dataset.SOLAR_GENERATION.value
+    start_date = "2024-01-01"
+    end_date = "2024-01-31"
+    
+    mock_response = {
+        "total_count": 2,
+        "records": [
+            {"id": 1, "datetime": "2024-01-15T12:00:00", "value": 100},
+            {"id": 2, "datetime": "2024-01-16T12:00:00", "value": 200}
+        ],
+        "has_next": False
+    }
+    
+    # The expected where condition
+    expected_where = f"datetime >= '{start_date}' AND datetime <= '{end_date}'"
+    
+    def match_query_params(request):
+        params = requests.utils.parse_qs(request.url.split('?')[1])
+        assert params.get('where', [None])[0] == expected_where
+        return True
+    
+    mock_api.add(
+        responses.GET,
+        f"{EliaClient.BASE_URL}catalog/datasets/{dataset_id}/records",
+        match=[match_query_params],
+        json=mock_response,
+        status=200
+    )
+    
+    logger.debug(f"Requesting records for dataset {dataset_id} between {start_date} and {end_date}")
+    records = client.get_dataset_between(
+        Dataset.SOLAR_GENERATION,
+        start_date=start_date,
+        end_date=end_date
+    )
+    
+    assert records.total_count == 2
+    assert len(records.records) == 2
+    assert all('datetime' in record for record in records.records)
+    assert all(start_date <= record['datetime'].split('T')[0] <= end_date
+              for record in records.records)
+    logger.debug("Successfully retrieved date-filtered records")
