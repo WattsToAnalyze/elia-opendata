@@ -101,6 +101,59 @@ Optional dependencies for data conversion:
 - polars
 - pyarrow
 
+### Advanced Data Processing
+
+The library includes an `EliaDataProcessor` that makes it easy to work with large datasets and perform common data manipulation tasks:
+
+```python
+from elia_opendata import EliaClient, EliaDataProcessor, Dataset
+from datetime import datetime, timedelta
+
+# Initialize the data processor
+processor = EliaDataProcessor()
+
+# Fetch a complete dataset (automatically handles pagination)
+solar_data = processor.fetch_complete_dataset(
+    dataset=Dataset.PV_PRODUCTION,
+    batch_size=100  # Number of records per API request (max 100)
+)
+print(f"Retrieved {solar_data.total_count} solar production records")
+
+# Fetch data for a specific date range
+end_date = datetime.utcnow()
+start_date = end_date - timedelta(days=7)
+
+wind_data = processor.fetch_date_range(
+    dataset=Dataset.WIND_PRODUCTION,
+    start_date=start_date,
+    end_date=end_date
+)
+
+# Merge multiple datasets
+combined = processor.merge_records([solar_data, wind_data])
+print(f"Combined records: {combined.total_count}")
+
+# Aggregate data by a field
+# For example, aggregate solar production by region
+region_sum = processor.aggregate_by_field(
+    solar_data,
+    "region",
+    {"measured": "sum", "datetime": "max"}
+)
+print(region_sum.to_pandas())
+
+# Converting to different DataFrame formats
+pandas_df = processor.to_dataframe(solar_data, output_format="pandas")
+polars_df = processor.to_dataframe(solar_data, output_format="polars")
+numpy_array = processor.to_dataframe(solar_data, output_format="numpy")
+```
+
+The `EliaDataProcessor` makes working with Elia OpenData more efficient by handling:
+- Automatic pagination for large datasets
+- Date filtering with optimized API calls
+- Simplified data aggregation
+- Format conversion between pandas, polars, and numpy
+
 ## License
 
 MIT License
