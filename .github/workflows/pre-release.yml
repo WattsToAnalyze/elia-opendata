@@ -1,10 +1,10 @@
-name: Pre-release Build
+name: Nightly/Pre-release Build
 
 on:
   workflow_dispatch:
     inputs:
       prerelease_label:
-        description: 'Pre-release label (e.g., alpha, beta, rc)'
+        description: 'Pre-release label (dev, alpha, beta, rc)'
         required: false
         default: 'dev'
         type: string
@@ -48,7 +48,7 @@ jobs:
           echo "BASE_VERSION=$BASE_VERSION" >> $GITHUB_ENV
           echo "Base version found: $BASE_VERSION"
       
-      - name: Generate prerelease version
+      - name: Generate PEP 440 compliant prerelease version
         run: |
           PRERELEASE_LABEL="${{ github.event.inputs.prerelease_label }}"
           
@@ -58,17 +58,22 @@ jobs:
           if [[ "${{ github.event.inputs.include_date }}" == "true" ]]; then
             # Get current date in YYYYMMDD format
             DATE_SUFFIX=$(date +%Y%m%d)
-            PRERELEASE_VERSION="${{ env.BASE_VERSION }}-${PRERELEASE_LABEL}.${DATE_SUFFIX}.${COMMIT_HASH}"
+            # PEP 440: Use dots instead of hyphens for pre-release segments
+            PRERELEASE_VERSION="${{ env.BASE_VERSION }}.${PRERELEASE_LABEL}${DATE_SUFFIX}${COMMIT_HASH}"
           else
-            PRERELEASE_VERSION="${{ env.BASE_VERSION }}-${PRERELEASE_LABEL}.${COMMIT_HASH}"
+            PRERELEASE_VERSION="${{ env.BASE_VERSION }}.${PRERELEASE_LABEL}${COMMIT_HASH}"
           fi
           
           echo "PRERELEASE_VERSION=$PRERELEASE_VERSION" >> $GITHUB_ENV
           echo "Generated prerelease version: $PRERELEASE_VERSION"
+          
+          # Also create a GitHub tag version (can include hyphens)
+          TAG_VERSION="${{ env.BASE_VERSION }}-${PRERELEASE_LABEL}.${DATE_SUFFIX}.${COMMIT_HASH}"
+          echo "TAG_VERSION=$TAG_VERSION" >> $GITHUB_ENV
       
       - name: Create temporary version files
         run: |
-          # Update pyproject.toml with prerelease version
+          # Update pyproject.toml with PEP 440 compliant prerelease version
           sed -i "s/version = \"${{ env.BASE_VERSION }}\"/version = \"${{ env.PRERELEASE_VERSION }}\"/g" pyproject.toml
           
           # Find and update __version__ in __init__.py (handles various formats)
@@ -108,8 +113,8 @@ jobs:
         if: ${{ github.event.inputs.publish_method == 'github-release' || github.event.inputs.publish_method == 'both' }}
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ env.PRERELEASE_VERSION }}
-          name: Pre-release v${{ env.PRERELEASE_VERSION }}
+          tag_name: v${{ env.TAG_VERSION }}  # Use the GitHub-friendly tag version
+          name: Pre-release v${{ env.TAG_VERSION }}
           body: |
             This is a pre-release version from the main branch.
             
@@ -121,10 +126,13 @@ jobs:
             
             ```bash
             # Direct installation from this release:
-            pip install https://github.com/${{ github.repository }}/releases/download/v${{ env.PRERELEASE_VERSION }}/$(ls dist/*.whl | xargs basename)
+            pip install https://github.com/${{ github.repository }}/releases/download/v${{ env.TAG_VERSION }}/$(ls dist/*.whl | xargs basename)
             
             # Or install from the repository:
             pip install git+https://github.com/${{ github.repository }}.git@${{ github.sha }}
+            
+            # If published to GitHub Packages:
+            pip install --index-url https://maven.pkg.github.com/${{ github.repository }} elia-opendata==${{ env.PRERELEASE_VERSION }}
             ```
             
             ⚠️ This is a development build and may contain unstable features ⚠️
