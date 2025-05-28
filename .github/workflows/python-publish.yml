@@ -28,11 +28,29 @@ jobs:
         with:
           python-version: "3.x"
 
+      - name: Clean previous build artifacts
+        run: |
+          rm -rf build/ dist/ *.egg-info/
+
+      - name: Debug package version
+        run: |
+          echo "Package version in pyproject.toml:"
+          grep -E "version\s*=\s*" pyproject.toml
+          # Adjust the path to your __init__.py as needed
+          echo "Package version in __init__.py (if applicable):"
+          find . -name "__init__.py" -exec grep -l "__version__" {} \; -exec grep "__version__" {} \;
+
       - name: Build release distributions
         run: |
-          # NOTE: put your own distribution build steps here.
-          python -m pip install build
+          python -m pip install --upgrade pip
+          python -m pip install build twine
           python -m build
+
+      - name: Verify built distributions
+        run: |
+          echo "Files built for distribution:"
+          ls -la dist/
+          python -m twine check dist/*
 
       - name: Upload distributions
         uses: actions/upload-artifact@v4
@@ -49,7 +67,6 @@ jobs:
       id-token: write
 
     # Dedicated environments with protections for publishing are strongly recommended.
-    # For more information, see: https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment#deployment-protection-rules
     environment:
       name: pypi
       # OPTIONAL: Uncomment and update to include your PyPI project URL in the deployment status:
@@ -65,6 +82,9 @@ jobs:
         with:
           name: release-dists
           path: dist/
+
+      - name: List files to be published
+        run: ls -la dist/
 
       - name: Publish release distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
