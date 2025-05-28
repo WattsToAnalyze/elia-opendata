@@ -64,3 +64,16 @@ jobs:
           password: ${{ secrets.PYPI_TOKEN }}
           # Use this option if you want to skip existing versions instead of failing
           # skip-existing: true
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ env.VERSION }}
+          name: Release v${{ env.VERSION }}
+          body: |
+            Release version ${{ env.VERSION }}
+            
+            Manually triggered release from the 'releases' branch
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
