@@ -17,8 +17,8 @@ from .client import EliaClient
 from .error import EliaError, RateLimitError, AuthError
 from .datasets import Dataset, DatasetCategory
 
-__version__ = "0.1.0"
-__author__ = "Gargy Agokhale"
+__version__ = "0.1.1"
+__author__ = "WattsToAnalyze"
 
 __all__ = [
     'EliaClient',
