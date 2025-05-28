@@ -2,7 +2,7 @@ name: Python Package
 
 # This workflow will:
 # 1. Be manually triggered via GitHub Actions UI
-# 2. Check out the 'releases' branch
+# 2. Check out the 'release' branch
 # 3. Build the package
 # 4. Publish to PyPI
 
@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       confirm_release_branch:
-        description: 'Confirm you want to deploy from releases branch'
+        description: 'Confirm you want to deploy from release branch'
         required: true
         type: boolean
         default: true
@@ -25,7 +25,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: releases  # Always use the releases branch
+          ref: release  # Always use the release branch
       
       - name: Set up Python
         uses: actions/setup-python@v5
