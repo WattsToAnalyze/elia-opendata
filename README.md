@@ -1,15 +1,45 @@
-![PyPI](https://img.shields.io/pypi/v/elia-opendata?style=flat&color=blue&logo=pypi&logoColor=white&cache-bust=v1)
+![PyPI](https://img.shields.io/pypi/v/elia-opendata?style=flat&color=blue&logo=pypi&logoColor=white)
+![Latest Nightly](https://img.shields.io/github/v/release/WattsToAnalyze/elia-opendata?include_prereleases&label=nightly&color=orange)
 ![Build Status](https://github.com/WattsToAnalyze/elia-opendata/actions/workflows/python-publish.yml/badge.svg)
+![Nightly Build](https://github.com/WattsToAnalyze/elia-opendata/actions/workflows/nightly-prerelease.yml/badge.svg)
 <!-- ![License](https://img.shields.io/github/license/WattsToAnalyze/elia-opendata) -->
 # Elia OpenData Python Client
 
 A Python client for accessing the Elia Open Data Portal API. This client provides a simple interface to access Elia's energy data with support for easy data conversion to popular data science formats.
 
 ## Installation
+For stable releases, you can install the package from PyPI:
 
 ```bash
 pip install elia-opendata
 ```
+
+### Nightly/Pre-release Version
+
+You can install the latest pre-release (nightly) build directly from GitHub Releases:
+
+1. Go to the [Releases page](https://github.com/WattsToAnalyze/elia-opendata/releases) and find the most recent pre-release.
+2. Copy the link to the `.whl` file attached to that release.
+3. Install with:
+
+```bash
+pip install https://github.com/WattsToAnalyze/elia-opendata/releases/download/<TAG>/<WHEEL_FILENAME>
+```
+
+Or, if you have set up a "latest-nightly" tag as discussed, you can use:
+
+```bash
+pip install https://github.com/WattsToAnalyze/elia-opendata/releases/download/latest-nightly/elia_opendata-latest.whl
+```
+
+### Development Version (from source)
+
+You can also install the development version directly from the main branch:
+
+```bash
+pip install git+https://github.com/WattsToAnalyze/elia-opendata.git@main
+```
+
 
 ## Usage
 
