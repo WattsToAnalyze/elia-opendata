@@ -1,7 +1,6 @@
 ![PyPI](https://img.shields.io/pypi/v/elia-opendata?style=flat&color=blue&logo=pypi&logoColor=white)
-![Latest Nightly](https://img.shields.io/github/v/release/WattsToAnalyze/elia-opendata?include_prereleases&label=nightly&color=orange)
 ![Build Status](https://github.com/WattsToAnalyze/elia-opendata/actions/workflows/python-publish.yml/badge.svg)
-![Nightly Build](https://github.com/WattsToAnalyze/elia-opendata/actions/workflows/nightly-prerelease.yml/badge.svg)
+![Latest dev release](https://img.shields.io/github/v/release/WattsToAnalyze/elia-opendata?include_prereleases&sort=semver&label=dev%20release&color=orange)
 <!-- ![License](https://img.shields.io/github/license/WattsToAnalyze/elia-opendata) -->
 # Elia OpenData Python Client
 
