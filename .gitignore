@@ -1,5 +1,6 @@
 # Custom
 secrets.yml
+release_guidelines.md
 
 # Python
 __pycache__/

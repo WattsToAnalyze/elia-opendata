@@ -1,4 +1,4 @@
-![PyPI](https://img.shields.io/pypi/v/elia-opendata)
+![PyPI](https://img.shields.io/pypi/v/elia-opendata?style=flat&color=blue&logo=pypi&logoColor=white&cache-bust=v1)
 ![Build Status](https://github.com/WattsToAnalyze/elia-opendata/actions/workflows/python-publish.yml/badge.svg)
 <!-- ![License](https://img.shields.io/github/license/WattsToAnalyze/elia-opendata) -->
 # Elia OpenData Python Client
