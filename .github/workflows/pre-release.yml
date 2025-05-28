@@ -3,16 +3,16 @@ name: Nightly/Pre-release Build
 on:
   workflow_dispatch:
     inputs:
-      prerelease_label:
-        description: 'Pre-release label (dev, alpha, beta, rc)'
-        required: false
-        default: 'dev'
-        type: string
-      include_date:
-        description: 'Include date in version (YYYYMMDD)'
+      prerelease_type:
+        description: 'Pre-release type (dev, alpha, beta, rc)'
         required: true
-        default: true
-        type: boolean
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - alpha
+          - beta
+          - rc
       publish_method:
         description: 'Where to publish the package'
         required: true
@@ -50,30 +50,41 @@ jobs:
       
       - name: Generate PEP 440 compliant prerelease version
         run: |
-          PRERELEASE_LABEL="${{ github.event.inputs.prerelease_label }}"
-          
+          # Get build number (could be from CI, or we'll use timestamp)
+          BUILD_NUMBER=$(date +%Y%m%d%H%M%S)
           # Get short commit hash
           COMMIT_HASH=$(git rev-parse --short HEAD)
           
-          if [[ "${{ github.event.inputs.include_date }}" == "true" ]]; then
-            # Get current date in YYYYMMDD format
-            DATE_SUFFIX=$(date +%Y%m%d)
-            # PEP 440: Use dots instead of hyphens for pre-release segments
-            PRERELEASE_VERSION="${{ env.BASE_VERSION }}.${PRERELEASE_LABEL}${DATE_SUFFIX}${COMMIT_HASH}"
-          else
-            PRERELEASE_VERSION="${{ env.BASE_VERSION }}.${PRERELEASE_LABEL}${COMMIT_HASH}"
-          fi
+          # Handle different prerelease types according to PEP 440
+          case "${{ github.event.inputs.prerelease_type }}" in
+            dev)
+              # For dev releases: 0.1.1.dev20250528
+              PRERELEASE_VERSION="${{ env.BASE_VERSION }}.dev${BUILD_NUMBER}"
+              ;;
+            alpha)
+              # For alpha releases: 0.1.1a1
+              PRERELEASE_VERSION="${{ env.BASE_VERSION }}a${BUILD_NUMBER}"
+              ;;
+            beta)
+              # For beta releases: 0.1.1b1
+              PRERELEASE_VERSION="${{ env.BASE_VERSION }}b${BUILD_NUMBER}"
+              ;;
+            rc)
+              # For release candidates: 0.1.1rc1
+              PRERELEASE_VERSION="${{ env.BASE_VERSION }}rc${BUILD_NUMBER}"
+              ;;
+          esac
           
           echo "PRERELEASE_VERSION=$PRERELEASE_VERSION" >> $GITHUB_ENV
-          echo "Generated prerelease version: $PRERELEASE_VERSION"
+          echo "Generated PEP 440 compliant version: $PRERELEASE_VERSION"
           
-          # Also create a GitHub tag version (can include hyphens)
-          TAG_VERSION="${{ env.BASE_VERSION }}-${PRERELEASE_LABEL}.${DATE_SUFFIX}.${COMMIT_HASH}"
+          # Also create a GitHub tag version (can include commit hash)
+          TAG_VERSION="${PRERELEASE_VERSION}+${COMMIT_HASH}"
           echo "TAG_VERSION=$TAG_VERSION" >> $GITHUB_ENV
       
       - name: Create temporary version files
         run: |
-          # Update pyproject.toml with PEP 440 compliant prerelease version
+          # Update pyproject.toml with PEP 440 compliant version
           sed -i "s/version = \"${{ env.BASE_VERSION }}\"/version = \"${{ env.PRERELEASE_VERSION }}\"/g" pyproject.toml
           
           # Find and update __version__ in __init__.py (handles various formats)
@@ -113,7 +124,7 @@ jobs:
         if: ${{ github.event.inputs.publish_method == 'github-release' || github.event.inputs.publish_method == 'both' }}
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ env.TAG_VERSION }}  # Use the GitHub-friendly tag version
+          tag_name: v${{ env.TAG_VERSION }}
           name: Pre-release v${{ env.TAG_VERSION }}
           body: |
             This is a pre-release version from the main branch.
