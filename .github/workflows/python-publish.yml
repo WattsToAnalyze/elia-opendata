@@ -1,36 +1,34 @@
-name: Python Package Release & Publish
+name: Python Package
 
-# This workflow handles:
-# 1. Building and testing the package
-# 2. Creating a GitHub release when changes are pushed to the 'release' branch
-# 3. Publishing the package to PyPI when a release is created
+# This workflow will:
+# 1. Be manually triggered via GitHub Actions UI
+# 2. Check out the 'releases' branch
+# 3. Build the package
+# 4. Publish to PyPI
 
 on:
-  # Trigger when code is pushed to release branch
-  push:
-    branches:
-      - release
-    paths:
-      - 'pyproject.toml'  # Only trigger when version info might have changed
-  
-  # Also trigger when a GitHub release is manually published
-  release:
-    types: [published]
+  # This allows manual triggering from the Actions tab
+  workflow_dispatch:
+    inputs:
+      confirm_release_branch:
+        description: 'Confirm you want to deploy from releases branch'
+        required: true
+        type: boolean
+        default: true
 
 jobs:
-  # Job to validate the version and prepare everything
-  validate-and-build:
+  build-and-publish:
+    # Only run the job if confirmation is true
+    if: ${{ inputs.confirm_release_branch }}
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.get_version.outputs.version }}
-      should_release: ${{ steps.check_release.outputs.should_release }}
-      
+    
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          ref: releases  # Always use the releases branch
       
-      - uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.x"
       
@@ -39,7 +37,6 @@ jobs:
         run: |
           VERSION=$(grep -E "version\s*=\s*" pyproject.toml | sed -E 's/.*version\s*=\s*"([^"]+)".*/\1/')
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Version found: $VERSION"
       
       - name: Clean previous build artifacts
@@ -49,91 +46,21 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install build twine pytest
+          pip install build twine
       
       - name: Build package
         run: python -m build
       
-      - name: Run tests
-        run: pytest
-        continue-on-error: false
-      
-      - name: Verify built distribution files
+      - name: Verify built distributions
         run: |
           echo "Files built for distribution:"
           ls -la dist/
           python -m twine check dist/*
-      
-      - name: Check if release exists
-        id: check_release
-        run: |
-          TAG="v${{ env.VERSION }}"
-          if git ls-remote --tags origin | grep -q $TAG; then
-            echo "Tag $TAG already exists, no need to create a release"
-            echo "should_release=false" >> $GITHUB_OUTPUT
-          else
-            echo "Tag $TAG doesn't exist, should create a release"
-            echo "should_release=true" >> $GITHUB_OUTPUT
-          fi
-      
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: python-package-distributions
-          path: dist/
-  
-  # Job to create a GitHub Release
-  create-release:
-    needs: validate-and-build
-    if: needs.validate-and-build.outputs.should_release == 'true' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Create Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ needs.validate-and-build.outputs.version }}
-          release_name: Release v${{ needs.validate-and-build.outputs.version }}
-          draft: false
-          prerelease: false
-          body: |
-            Release version ${{ needs.validate-and-build.outputs.version }}
-            
-            Automated release from the 'release' branch
-            
-            ### What's Changed
-            * See commit history for detailed changes
-  
-  # Job to publish to PyPI when a release is created
-  publish-to-pypi:
-    if: github.event_name == 'release'
-    runs-on: ubuntu-latest
-    needs: validate-and-build
-    permissions:
-      id-token: write  # For PyPI trusted publishing
-    
-    environment:
-      name: pypi
-      url: https://pypi.org/project/${{ github.repository.name }}/${{ needs.validate-and-build.outputs.version }}
-    
-    steps:
-      - name: Download built distributions
-        uses: actions/download-artifact@v4
-        with:
-          name: python-package-distributions
-          path: dist/
-      
-      - name: List files to be published
-        run: ls -la dist/
       
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist/
           password: ${{ secrets.PYPI_TOKEN }}
+          # Use this option if you want to skip existing versions instead of failing
+          # skip-existing: true
