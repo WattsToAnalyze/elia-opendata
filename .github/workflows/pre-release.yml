@@ -115,10 +115,10 @@ jobs:
       - name: Publish to GitHub Packages
         if: ${{ github.event.inputs.publish_method == 'github-packages' || github.event.inputs.publish_method == 'both' }}
         run: |
-          python -m twine upload --repository-url https://maven.pkg.github.com/${{ github.repository }} dist/*
+            python -m twine upload --repository-url https://pypi.pkg.github.com/${{ github.repository_owner }} dist/*
         env:
-          TWINE_USERNAME: ${{ github.actor }}
-          TWINE_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+            TWINE_USERNAME: ${{ github.actor }}
+            TWINE_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Create GitHub Pre-release
         if: ${{ github.event.inputs.publish_method == 'github-release' || github.event.inputs.publish_method == 'both' }}
