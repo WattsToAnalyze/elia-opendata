@@ -1,0 +1,136 @@
+name: Pre-release Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      prerelease_label:
+        description: 'Pre-release label (e.g., alpha, beta, rc)'
+        required: false
+        default: 'dev'
+        type: string
+      include_date:
+        description: 'Include date in version (YYYYMMDD)'
+        required: true
+        default: true
+        type: boolean
+      publish_method:
+        description: 'Where to publish the package'
+        required: true
+        default: 'github-release'
+        type: choice
+        options:
+          - github-release
+          - github-packages
+          - both
+          - none
+
+jobs:
+  build-and-prerelease:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # For creating GitHub releases
+      packages: write  # For publishing to GitHub Packages
+      
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main  # Always use the main branch
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      
+      - name: Get base version from pyproject.toml
+        id: get_base_version
+        run: |
+          BASE_VERSION=$(grep -E "version\s*=\s*" pyproject.toml | sed -E 's/.*version\s*=\s*"([^"]+)".*/\1/')
+          echo "BASE_VERSION=$BASE_VERSION" >> $GITHUB_ENV
+          echo "Base version found: $BASE_VERSION"
+      
+      - name: Generate prerelease version
+        run: |
+          PRERELEASE_LABEL="${{ github.event.inputs.prerelease_label }}"
+          
+          # Get short commit hash
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          
+          if [[ "${{ github.event.inputs.include_date }}" == "true" ]]; then
+            # Get current date in YYYYMMDD format
+            DATE_SUFFIX=$(date +%Y%m%d)
+            PRERELEASE_VERSION="${{ env.BASE_VERSION }}-${PRERELEASE_LABEL}.${DATE_SUFFIX}.${COMMIT_HASH}"
+          else
+            PRERELEASE_VERSION="${{ env.BASE_VERSION }}-${PRERELEASE_LABEL}.${COMMIT_HASH}"
+          fi
+          
+          echo "PRERELEASE_VERSION=$PRERELEASE_VERSION" >> $GITHUB_ENV
+          echo "Generated prerelease version: $PRERELEASE_VERSION"
+      
+      - name: Create temporary version files
+        run: |
+          # Update pyproject.toml with prerelease version
+          sed -i "s/version = \"${{ env.BASE_VERSION }}\"/version = \"${{ env.PRERELEASE_VERSION }}\"/g" pyproject.toml
+          
+          # Find and update __version__ in __init__.py (handles various formats)
+          find . -name "__init__.py" -type f -exec sed -i "s/__version__ = ['\"]${{ env.BASE_VERSION }}['\"]/__version__ = \"${{ env.PRERELEASE_VERSION }}\"/g" {} \;
+          
+          # Show updated files
+          echo "Updated pyproject.toml:"
+          grep -n "version" pyproject.toml
+      
+      - name: Clean previous build artifacts
+        run: |
+          rm -rf build/ dist/ *.egg-info/
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+      
+      - name: Build package
+        run: python -m build
+      
+      - name: Verify built distributions
+        run: |
+          echo "Files built for distribution:"
+          ls -la dist/
+          python -m twine check dist/*
+      
+      - name: Publish to GitHub Packages
+        if: ${{ github.event.inputs.publish_method == 'github-packages' || github.event.inputs.publish_method == 'both' }}
+        run: |
+          python -m twine upload --repository-url https://maven.pkg.github.com/${{ github.repository }} dist/*
+        env:
+          TWINE_USERNAME: ${{ github.actor }}
+          TWINE_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Create GitHub Pre-release
+        if: ${{ github.event.inputs.publish_method == 'github-release' || github.event.inputs.publish_method == 'both' }}
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ env.PRERELEASE_VERSION }}
+          name: Pre-release v${{ env.PRERELEASE_VERSION }}
+          body: |
+            This is a pre-release version from the main branch.
+            
+            Base version: ${{ env.BASE_VERSION }}
+            Pre-release version: ${{ env.PRERELEASE_VERSION }}
+            Commit: ${{ github.sha }}
+            
+            ## Installation
+            
+            ```bash
+            # Direct installation from this release:
+            pip install https://github.com/${{ github.repository }}/releases/download/v${{ env.PRERELEASE_VERSION }}/$(ls dist/*.whl | xargs basename)
+            
+            # Or install from the repository:
+            pip install git+https://github.com/${{ github.repository }}.git@${{ github.sha }}
+            ```
+            
+            ⚠️ This is a development build and may contain unstable features ⚠️
+          prerelease: true
+          generate_release_notes: true
+          files: |
+            dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
