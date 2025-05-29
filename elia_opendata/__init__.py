@@ -24,7 +24,7 @@ from .error import EliaError, RateLimitError, AuthError
 from .datasets import Dataset, DatasetCategory
 from .data_processor import EliaDataProcessor
 
-__version__ = "0.1.1"
+__version__ = "0.2.0"
 __author__ = "WattsToAnalyze"
 
 __all__ = [
