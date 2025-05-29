@@ -158,10 +158,6 @@ wind_data = processor.fetch_date_range(
     end_date=end_date
 )
 
-# Merge multiple datasets
-combined = processor.merge_records([solar_data, wind_data])
-print(f"Combined records: {combined.total_count}")
-
 # Aggregate data by a field
 # For example, aggregate solar production by region
 region_sum = processor.aggregate_by_field(

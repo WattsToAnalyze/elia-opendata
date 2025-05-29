@@ -39,18 +39,6 @@ def test_init_with_custom_client():
     processor = EliaDataProcessor(client=custom_client)
     assert processor.client == custom_client
 
-def test_merge_records_empty_list(processor):
-    """Test merging empty list of records."""
-    result = processor.merge_records([])
-    assert result.total_count == 0
-    assert len(result.records) == 0
-
-def test_merge_records(processor, sample_records):
-    """Test merging multiple Records objects."""
-    merged = processor.merge_records([sample_records, sample_records])
-    assert merged.total_count == 4
-    assert len(merged.records) == 4
-
 def test_to_dataframe_invalid_format(processor, sample_records):
     """Test to_dataframe with invalid format."""
     with pytest.raises(ValueError) as exc_info:

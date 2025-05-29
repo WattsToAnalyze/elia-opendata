@@ -170,32 +170,6 @@ class EliaDataProcessor:
         # Pass the optimized batch size to fetch_complete_dataset
         return self.fetch_complete_dataset(dataset, batch_size=batch_size, **kwargs)
 
-    def merge_records(self, records_list: List[Records]) -> Records:
-        """
-        Merge multiple Records objects into a single Records object.
-        
-        Args:
-            records_list: List of Records objects to merge
-            
-        Returns:
-            Combined Records object
-        """
-        if not records_list:
-            return Records({"total_count": 0, "records": [], "links": []})
-            
-        merged_records = []
-        total_count = 0
-        
-        for records in records_list:
-            merged_records.extend(records.records)
-            total_count += records.total_count
-            
-        return Records({
-            "total_count": total_count,
-            "records": merged_records,
-            "links": []
-        })
-
     def aggregate_by_field(
         self,
         records: Records,
