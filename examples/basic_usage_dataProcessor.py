@@ -15,12 +15,9 @@ from datetime import datetime, timedelta
 from elia_opendata import EliaClient, EliaDataProcessor, Dataset
 from elia_opendata.models import Records
 
-# Initialize the data processor (it will create a client automatically)
-processor = EliaDataProcessor()
-
 # Alternatively, you can pass an existing client
 client = EliaClient()
-processor_with_client = EliaDataProcessor(client)
+processor = EliaDataProcessor(client)
 
 # Example 1: Fetch a complete dataset (with pagination handled automatically)
 print("\n=== Example 1: Fetch complete dataset ===")
@@ -35,7 +32,7 @@ print("First record:", solar_data.records[0]["record"]["fields"])
 # Example 2: Fetch data for a specific date range
 print("\n=== Example 2: Fetch data for a date range ===")
 # Get data for the last 7 days
-end_date = datetime.utcnow()
+end_date = datetime.now()
 start_date = end_date - timedelta(days=7)
 print(f"Fetching data from {start_date.isoformat()} to {end_date.isoformat()}")
 
@@ -47,10 +44,8 @@ wind_data = processor.fetch_date_range(
 )
 print(f"Retrieved {wind_data.total_count} wind production records")
 
-# Example 3: Merge multiple datasets
-print("\n=== Example 3: Merge datasets ===")
 # Get both solar and wind data for the past day
-yesterday = datetime.utcnow() - timedelta(days=1)
+yesterday = datetime.now() - timedelta(days=1)
 solar_day = processor.fetch_date_range(
     dataset=Dataset.PV_PRODUCTION,
     start_date=yesterday,
@@ -61,21 +56,15 @@ solar_day = processor.fetch_date_range(
 wind_day = processor.fetch_date_range(
     dataset=Dataset.WIND_PRODUCTION,
     start_date=yesterday,
-    end_date=datetime.utcnow(),
+    end_date=datetime.now(),
     max_batches=2  # Limit to 2 batches for demonstration
 )
 
-# Merge datasets - useful for analysis requiring multiple data sources
-# Note: In a real application, you might want to handle schema differences
-print(f"Solar records: {solar_day.total_count}, Wind records: {wind_day.total_count}")
-combined = processor.merge_records([solar_day, wind_day])
-print(f"Combined records: {combined.total_count}")
-
-# Example 4: Aggregate data by a field
-print("\n=== Example 4: Aggregate data ===")
+# Example 3: Aggregate data by a field
+print("\n=== Example 3: Aggregate data ===")
 # First convert to pandas DataFrame to check available fields
 df = solar_day.to_pandas()
-print("Available fields:", df.columns.tolist())
+print(f"Ssolar Data Head: {df.head()}")
 
 # For solar data, we have 'datetime' and 'measured' fields
 # Aggregate data by region, summing the measured values
@@ -102,8 +91,8 @@ if 'datetime' in df.columns and 'measured' in df.columns and 'region' in df.colu
 else:
     print("Required fields for aggregation not available in the sample data")
 
-# Example 5: Converting to different DataFrame formats
-print("\n=== Example 5: Convert to different formats ===")
+# Example 4: Converting to different DataFrame formats
+print("\n=== Example 4: Convert to different formats ===")
 # The processor can convert Records to pandas, polars, or numpy
 pandas_df = processor.to_dataframe(solar_day, output_format="pandas")
 print("Pandas DataFrame shape:", pandas_df.shape)
@@ -118,8 +107,3 @@ try:
 except ImportError:
     print("Polars not installed, skipping polars conversion")
 
-print("\nDataProcessor makes working with Elia OpenData more efficient by handling:")
-print("- Automatic pagination for large datasets")
-print("- Date filtering with optimized API calls")
-print("- Simplified data aggregation")
-print("- Format conversion between pandas, polars, and numpy")
