@@ -1,0 +1,155 @@
+name: Nightly/Pre-release Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      prerelease_type:
+        description: 'Pre-release type (dev, alpha, beta, rc)'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - alpha
+          - beta
+          - rc
+      publish_method:
+        description: 'Where to publish the package'
+        required: true
+        default: 'github-release'
+        type: choice
+        options:
+          - github-release
+          - github-packages
+          - both
+          - none
+
+jobs:
+  build-and-prerelease:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # For creating GitHub releases
+      packages: write  # For publishing to GitHub Packages
+      
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main  # Always use the main branch
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      
+      - name: Get base version from pyproject.toml
+        id: get_base_version
+        run: |
+          BASE_VERSION=$(grep -E "version\s*=\s*" pyproject.toml | sed -E 's/.*version\s*=\s*"([^"]+)".*/\1/')
+          echo "BASE_VERSION=$BASE_VERSION" >> $GITHUB_ENV
+          echo "Base version found: $BASE_VERSION"
+      
+      - name: Generate PEP 440 compliant prerelease version
+        run: |
+          # Get build number (could be from CI, or we'll use timestamp)
+          BUILD_NUMBER=$(date +%Y%m%d%H%M%S)
+          # Get short commit hash
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          
+          # Handle different prerelease types according to PEP 440
+          case "${{ github.event.inputs.prerelease_type }}" in
+            dev)
+              # For dev releases: 0.1.1.dev20250528
+              PRERELEASE_VERSION="${{ env.BASE_VERSION }}.dev${BUILD_NUMBER}"
+              ;;
+            alpha)
+              # For alpha releases: 0.1.1a1
+              PRERELEASE_VERSION="${{ env.BASE_VERSION }}a${BUILD_NUMBER}"
+              ;;
+            beta)
+              # For beta releases: 0.1.1b1
+              PRERELEASE_VERSION="${{ env.BASE_VERSION }}b${BUILD_NUMBER}"
+              ;;
+            rc)
+              # For release candidates: 0.1.1rc1
+              PRERELEASE_VERSION="${{ env.BASE_VERSION }}rc${BUILD_NUMBER}"
+              ;;
+          esac
+          
+          echo "PRERELEASE_VERSION=$PRERELEASE_VERSION" >> $GITHUB_ENV
+          echo "Generated PEP 440 compliant version: $PRERELEASE_VERSION"
+          
+          # Also create a GitHub tag version (can include commit hash)
+          TAG_VERSION="${PRERELEASE_VERSION}+${COMMIT_HASH}"
+          echo "TAG_VERSION=$TAG_VERSION" >> $GITHUB_ENV
+      
+      - name: Create temporary version files
+        run: |
+          # Update pyproject.toml with PEP 440 compliant version
+          sed -i "s/version = \"${{ env.BASE_VERSION }}\"/version = \"${{ env.PRERELEASE_VERSION }}\"/g" pyproject.toml
+          
+          # Find and update __version__ in __init__.py (handles various formats)
+          find . -name "__init__.py" -type f -exec sed -i "s/__version__ = ['\"]${{ env.BASE_VERSION }}['\"]/__version__ = \"${{ env.PRERELEASE_VERSION }}\"/g" {} \;
+          
+          # Show updated files
+          echo "Updated pyproject.toml:"
+          grep -n "version" pyproject.toml
+      
+      - name: Clean previous build artifacts
+        run: |
+          rm -rf build/ dist/ *.egg-info/
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+      
+      - name: Build package
+        run: python -m build
+      
+      - name: Verify built distributions
+        run: |
+          echo "Files built for distribution:"
+          ls -la dist/
+          python -m twine check dist/*
+      
+      - name: Publish to GitHub Packages
+        if: ${{ github.event.inputs.publish_method == 'github-packages' || github.event.inputs.publish_method == 'both' }}
+        run: |
+            python -m twine upload --repository-url https://pypi.pkg.github.com/${{ github.repository_owner }} dist/*
+        env:
+            TWINE_USERNAME: ${{ github.actor }}
+            TWINE_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Create GitHub Pre-release
+        if: ${{ github.event.inputs.publish_method == 'github-release' || github.event.inputs.publish_method == 'both' }}
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ env.TAG_VERSION }}
+          name: Pre-release v${{ env.TAG_VERSION }}
+          body: |
+            This is a pre-release version from the main branch.
+            
+            Base version: ${{ env.BASE_VERSION }}
+            Pre-release version: ${{ env.PRERELEASE_VERSION }}
+            Commit: ${{ github.sha }}
+            
+            ## Installation
+            
+            ```bash
+            # Direct installation from this release:
+            pip install https://github.com/${{ github.repository }}/releases/download/v${{ env.TAG_VERSION }}/$(ls dist/*.whl | xargs basename)
+            
+            # Or install from the repository:
+            pip install git+https://github.com/${{ github.repository }}.git@${{ github.sha }}
+            
+            # If published to GitHub Packages:
+            pip install --index-url https://maven.pkg.github.com/${{ github.repository }} elia-opendata==${{ env.PRERELEASE_VERSION }}
+            ```
+            
+            ⚠️ This is a development build and may contain unstable features ⚠️
+          prerelease: true
+          generate_release_notes: true
+          files: |
+            dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
