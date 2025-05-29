@@ -1,13 +1,9 @@
 name: Python Package
 
-# This workflow will:
-# 1. Be manually triggered via GitHub Actions UI
-# 2. Check out the 'release' branch
-# 3. Build the package
-# 4. Publish to PyPI
+permissions:
+  contents: write
 
 on:
-  # This allows manual triggering from the Actions tab
   workflow_dispatch:
     inputs:
       confirm_release_branch:
@@ -18,14 +14,13 @@ on:
 
 jobs:
   build-and-publish:
-    # Only run the job if confirmation is true
     if: ${{ inputs.confirm_release_branch }}
     runs-on: ubuntu-latest
     
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: release  # Always use the release branch
+          ref: release
       
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -62,8 +57,6 @@ jobs:
         with:
           packages-dir: dist/
           password: ${{ secrets.PYPI_TOKEN }}
-          # Use this option if you want to skip existing versions instead of failing
-          # skip-existing: true
       
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
