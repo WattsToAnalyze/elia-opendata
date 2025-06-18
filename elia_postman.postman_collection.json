@@ -1,0 +1,196 @@
+{
+  "info": {
+    "_postman_id": "6e8a98c0-d8b5-4f2c-90c0-7c0d0a3fcb7b",
+    "name": "Elia OpenData API",
+    "description": "Collection for testing Elia OpenData API endpoints as implemented in the Python client. Authentication is optional as the API supports unauthenticated access.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://opendata.elia.be/api/v2",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Catalog",
+      "item": [
+        {
+          "name": "Get Catalog Entries",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/catalog/datasets",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "catalog",
+                "datasets"
+              ]
+            },
+            "description": "Get list of available datasets from the catalog."
+          },
+          "response": []
+        },
+        {
+          "name": "Search Catalog",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/catalog/datasets/search?q={{search_query}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "catalog",
+                "datasets",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "{{search_query}}",
+                  "description": "Search query string"
+                }
+              ]
+            },
+            "description": "Search for datasets in the catalog."
+          },
+          "response": []
+        }
+      ],
+      "description": "API endpoints related to retrieving catalog information"
+    },
+    {
+      "name": "Datasets",
+      "item": [
+        {
+          "name": "Get Dataset Metadata",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/catalog/datasets/{{dataset_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "catalog",
+                "datasets",
+                "{{dataset_id}}"
+              ]
+            },
+            "description": "Get detailed metadata for a specific dataset."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Records",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/catalog/datasets/{{dataset_id}}/records?limit={{limit}}&offset={{offset}}&where={{where_condition}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "catalog",
+                "datasets",
+                "{{dataset_id}}",
+                "records"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Maximum number of records to return"
+                },
+                {
+                  "key": "offset",
+                  "value": "{{offset}}",
+                  "description": "Number of records to skip"
+                },
+                {
+                  "key": "where",
+                  "value": "{{where_condition}}",
+                  "description": "Filter condition"
+                }
+              ]
+            },
+            "description": "Get records from a specific dataset."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Records Between Dates",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/catalog/datasets/{{dataset_id}}/records?where=datetime >= '{{start_date}}' AND datetime <= '{{end_date}}'",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "catalog",
+                "datasets",
+                "{{dataset_id}}",
+                "records"
+              ],
+              "query": [
+                {
+                  "key": "where",
+                  "value": "datetime >= '{{start_date}}' AND datetime <= '{{end_date}}'",
+                  "description": "Date range filter"
+                }
+              ]
+            },
+            "description": "Get dataset records between two dates."
+          },
+          "response": []
+        }
+      ],
+      "description": "API endpoints related to accessing specific datasets and their records"
+    },
+    {
+      "name": "Authentication (Optional)",
+      "item": [
+        {
+          "name": "Get Catalog with API Key",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{api_key}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/catalog/datasets",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "catalog",
+                "datasets"
+              ]
+            },
+            "description": "Get catalog entries with API key authentication. Note: The Elia API supports both authenticated and unauthenticated access."
+          },
+          "response": []
+        }
+      ],
+      "description": "Examples of API calls with authentication (optional as the API supports unauthenticated access)"
+    }
+  ]
+}
