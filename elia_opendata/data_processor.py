@@ -41,6 +41,8 @@ import polars as pl
 
 from .client import EliaClient
 
+DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+
 logger = logging.getLogger(__name__)
 
 
@@ -179,8 +181,7 @@ class EliaDataProcessor:
         if "order_by" not in kwargs:
             kwargs["order_by"] = "-datetime"
 
-        response = self.client.get_records(dataset_id, **kwargs)
-        records = response.get("records", [])
+        records = self.client.get_records(dataset_id, **kwargs)
 
         return self._format_output(records)
 
@@ -260,11 +261,12 @@ class EliaDataProcessor:
             >>> df = processor.fetch_data_between(TOTAL_LOAD, start, end)
             >>> print(df.describe())  # Statistical summary
         """
-        # Convert datetime objects to ISO format strings
+        
         if isinstance(start_date, datetime):
-            start_date = start_date.isoformat()
+            start_date = start_date.strftime(DATETIME_FORMAT)
+            
         if isinstance(end_date, datetime):
-            end_date = end_date.isoformat()
+            end_date = end_date.strftime(DATETIME_FORMAT)
 
         logger.info(
             "Fetching data for dataset %s between %s and %s",
@@ -283,16 +285,17 @@ class EliaDataProcessor:
         # Fetch all records with pagination
         all_records = []
         offset = 0
-        limit = kwargs.get("limit", 100)  # Default batch size
+        # Remove limit from kwargs to avoid duplication
+        limit = kwargs.pop("limit", 100)
 
         while True:
-            response = self.client.get_records(
+
+            batch_records = self.client.get_records(
                 dataset_id,
                 limit=limit,
                 offset=offset,
                 **kwargs
             )
-            batch_records = response.get("results", [])
 
             if not batch_records:
                 break
@@ -304,6 +307,9 @@ class EliaDataProcessor:
                 break
 
             offset += limit
+            
+            if limit + offset > 10000:
+                break
 
         return self._format_output(all_records)
 

@@ -17,7 +17,7 @@ Example:
 
 """
 import logging
-from typing import Dict, Optional, Any, NoReturn
+from typing import Dict, List, Optional, Any, NoReturn
 from urllib.parse import urljoin
 
 import requests
@@ -55,7 +55,7 @@ class EliaClient:
 
     """
 
-    BASE_URL = "https://opendata.elia.be/api/v2/"
+    BASE_URL = "https://opendata.elia.be/api/explore/v2.1/"
 
     def __init__(
         self,
@@ -78,7 +78,7 @@ class EliaClient:
         offset: Optional[int] = None,
         where: Optional[str] = None,
         **kwargs
-    ) -> Dict[str, Any]:
+    ) -> List[Dict[str, Any]]:
         """Get records from a specific dataset.
 
         This method queries the Elia OpenData API records endpoint to retrieve
@@ -100,11 +100,7 @@ class EliaClient:
                 Common options include 'order_by', 'select', 'group_by'.
 
         Returns:
-            A dictionary containing the API response with the following
-            structure:
-            - 'records': List of record dictionaries
-            - 'total_count': Total number of records matching the query
-            - 'facets': Aggregation data (if requested)
+            A list of records
 
         Raises:
             APIError: If the API request fails due to server error, invalid
@@ -148,11 +144,23 @@ class EliaClient:
             params["offset"] = offset
         if where is not None:
             params["where"] = where
-
-        # Add any additional parameters
-        params.update(kwargs)
+        
+        default_params = {
+            'timezone': 'UTC',
+            'include_links': 'false',
+            'include_app_metas': 'false',
+        }
+        
+        params.update(default_params)
 
         try:
+            
+            req = requests.Request('GET', url, params=params, headers=headers)
+            prepared = req.prepare()
+
+            # Print the exact URL being used
+            print(f"Requesting: {prepared.url}")
+
             response = requests.get(
                 url,
                 params=params,
@@ -161,7 +169,11 @@ class EliaClient:
             )
 
             response.raise_for_status()
-            return response.json()
+
+            raw_data = response.json()
+
+            records = raw_data.get("results")
+            return records
 
         except requests.exceptions.HTTPError as e:
             self._handle_http_error(e)
