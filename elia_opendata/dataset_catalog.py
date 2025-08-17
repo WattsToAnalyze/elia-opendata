@@ -50,6 +50,8 @@ Constants:
             quarter-hour (Historical)
         IMBALANCE_PRICES_MIN (str): "ods133" - Imbalance price per minute
             (Historical)
+        IMBALANCE_PRICES_REALTIME (str): "ods161" - Real-time imbalance prices
+            with system data (Near real-time)
         SYSTEM_IMBALANCE (str): "ods126" - Current system imbalance
             (Historical)
         ACTIVATED_BALANCING_PRICES (str): "ods064" - Activated balancing energy
@@ -144,6 +146,7 @@ PHYSICAL_FLOWS = "ods124"
 # Balancing
 IMBALANCE_PRICES_QH = "ods134"
 IMBALANCE_PRICES_MIN = "ods133"
+IMBALANCE_PRICES_REALTIME = "ods161"
 SYSTEM_IMBALANCE = "ods126"
 ACTIVATED_BALANCING_PRICES = "ods064"
 ACTIVATED_BALANCING_VOLUMES = "ods063"
