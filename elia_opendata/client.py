@@ -25,9 +25,9 @@ class EliaClient:
         >>> client = EliaClient()
         >>> data = client.get_records("ods032", limit=100)
     """
-    
+
     BASE_URL = "https://opendata.elia.be/api/v2/"
-    
+
     def __init__(
         self,
         api_key: Optional[str] = None,
@@ -42,7 +42,7 @@ class EliaClient:
         """
         self.api_key = api_key
         self.timeout = timeout
-    
+
     def get_records(
         self,
         dataset_id: str,
@@ -69,7 +69,7 @@ class EliaClient:
             APIError: If the request fails
         """
         url = urljoin(self.BASE_URL, f"catalog/datasets/{dataset_id}/records")
-        
+
         headers = {
             "accept": "application/json; charset=utf-8"
         }
@@ -85,10 +85,10 @@ class EliaClient:
             params["offset"] = offset
         if where is not None:
             params["where"] = where
-        
+
         # Add any additional parameters
         params.update(kwargs)
-        
+
         try:
             response = requests.get(
                 url,
@@ -96,10 +96,10 @@ class EliaClient:
                 headers=headers,
                 timeout=self.timeout
             )
-            
+
             response.raise_for_status()
             return response.json()
-            
+
         except requests.exceptions.HTTPError as e:
             self._handle_http_error(e)
         except requests.exceptions.RequestException as e:
