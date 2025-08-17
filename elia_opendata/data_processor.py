@@ -1,266 +1,152 @@
 """
 Data processing utilities for Elia OpenData API.
 """
-from typing import List, Union, Optional, Dict, Any, Iterator
+from typing import Optional, Any, Union, List
 from datetime import datetime
 import logging
+import pandas as pd
+import polars as pl
+
 from .client import EliaClient
-from .models import Records
-from .datasets import Dataset
 
 logger = logging.getLogger(__name__)
 
+
 class EliaDataProcessor:
     """
-    Data processing utilities for working with Elia OpenData datasets.
-    Handles pagination, data fetching, and aggregation operations.
+    Simplified data processor for Elia OpenData datasets.
+    Returns data in the specified format (json, pandas, or polars).
     """
-    
-    def __init__(self, client: Optional[EliaClient] = None):
+
+    def __init__(
+        self,
+        client: Optional[EliaClient] = None,
+        return_type: str = "json"
+    ):
         """
         Initialize the data processor.
-        
+
         Args:
             client: EliaClient instance. If not provided, creates a new one.
+            return_type: Format for returned data - "json", "pandas", "polars"
         """
         self.client = client or EliaClient()
-    
-    def fetch_complete_dataset(
+        if return_type not in ["json", "pandas", "polars"]:
+            raise ValueError(
+                f"Invalid return_type: {return_type}. "
+                f"Must be 'json', 'pandas', or 'polars'"
+            )
+        self.return_type = return_type
+
+    def fetch_current_value(
         self,
-        dataset: Union[Dataset, str],
-        batch_size: int = 100,  # Set to API maximum limit (100)
+        dataset_id: str,
         **kwargs
-    ) -> Records:
+    ) -> Any:
         """
-        Fetch all records from a dataset, handling pagination automatically.
-        
+        Fetch the most recent value from a dataset.
+
         Args:
-            dataset: Dataset enum or ID string
-            batch_size: Number of records per batch (default: 100, max allowed by API)
-            max_batches: Maximum number of batches to fetch (default: 1000)
+            dataset_id: Dataset ID string
             **kwargs: Additional query parameters
-            
+
         Returns:
-            Records object containing all records from the dataset
+            Data in the format specified by return_type
         """
-        logger.info(f"Fetching complete dataset {dataset}")
-        all_records = []
-        total_count = 0
-        
-        # Ensure batch_size doesn't exceed API limit
-        batch_size = min(batch_size, 100)  # API limit is 100
-        
-        # Set a maximum number of batches to prevent infinite loops
-        max_batches = kwargs.pop("max_batches", 1000)  # Default to 1000 batches max
-        batch_count = 0
-        empty_batch_count = 0
-        max_empty_batches = 3  # Stop after 3 consecutive empty batches
+        logger.info("Fetching current value for dataset %s", dataset_id)
 
-        try:
-            for batch in self.client.iter_records(dataset, batch_size=batch_size, **kwargs):
-                # Keep track of total count for early termination
-                if total_count == 0 and batch.total_count > 0:
-                    total_count = batch.total_count
-                
-                if not batch.records:
-                    empty_batch_count += 1
-                    if empty_batch_count >= max_empty_batches:
-                        logger.warning(f"Received {max_empty_batches} consecutive empty batches, stopping.")
-                        break
-                    continue
-                else:
-                    empty_batch_count = 0  # Reset empty batch counter
-                
-                all_records.extend(batch.records)
-                batch_count += 1
-                logger.debug(f"Fetched {len(all_records)}/{total_count} records (batch {batch_count})")
-                
-                # Safety check to prevent infinite loops
-                if batch_count >= max_batches:
-                    logger.warning(f"Reached maximum batch count ({max_batches}), stopping.")
-                    break
-                
-                # Early termination if we have all data
-                if total_count > 0 and len(all_records) >= total_count:
-                    logger.debug("Fetched all available records based on count.")
-                    break
-                
-                # Check if we've reached the end of pagination
-                if not batch.has_next:
-                    logger.debug("No more pages available.")
-                    break
-        except Exception as e:
-            # Don't lose data if we hit an error after fetching some records
-            logger.error(f"Error during data fetching: {str(e)}")
-            if not all_records:
-                # Re-raise if we didn't get any records
-                raise
+        # Get the most recent record by limiting to 1 and ordering by
+        # datetime desc
+        kwargs["limit"] = 1
+        if "order_by" not in kwargs:
+            kwargs["order_by"] = "-datetime"
 
-        # Create a new Records object with all data
-        return Records({
-            "total_count": len(all_records),  # Use actual count of records fetched
-            "records": all_records,
-            "links": []  # No pagination links needed for complete dataset
-        })
+        response = self.client.get_records(dataset_id, **kwargs)
+        records = response.get("records", [])
 
-    def fetch_date_range(
+        return self._format_output(records)
+
+    def fetch_data_between(
         self,
-        dataset: Union[Dataset, str],
+        dataset_id: str,
         start_date: Union[str, datetime],
         end_date: Union[str, datetime],
-        batch_size: int = 100,  # Use API maximum as default
         **kwargs
-    ) -> Records:
+    ) -> Any:
         """
-        Fetch all records between two dates, handling pagination automatically.
-        
+        Fetch data between two dates.
+
         Args:
-            dataset: Dataset enum or ID string
+            dataset_id: Dataset ID string
             start_date: Start date (ISO format string or datetime)
-            end_date: End date (ISO format string or datetime) 
-            batch_size: Number of records per batch (default: 100, which is API maximum)
-            max_batches: Maximum number of batches to fetch
+            end_date: End date (ISO format string or datetime)
             **kwargs: Additional query parameters
-            
+
         Returns:
-            Records object containing all records in the date range
+            Data in the format specified by return_type
         """
-        # Ensure we're using proper ISO format strings for the API query
+        # Convert datetime objects to ISO format strings
         if isinstance(start_date, datetime):
-            # Keep milliseconds for more precise filtering
             start_date = start_date.isoformat()
         if isinstance(end_date, datetime):
             end_date = end_date.isoformat()
-            
-        logger.info(f"Fetching dataset {dataset} between {start_date} and {end_date}")
-        
-        # Ensure batch_size doesn't exceed API limit
-        batch_size = min(batch_size, 100)  # API limit is 100
-            
+
+        logger.info(
+            "Fetching data for dataset %s between %s and %s",
+            dataset_id, start_date, end_date
+        )
+
         # Build the date filter condition
-        where_condition = f"datetime >= '{start_date}' AND datetime <= '{end_date}'"
+        where_condition = (
+            f"datetime IN [date'{start_date}'..date'{end_date}']"
+        )
         if "where" in kwargs:
             kwargs["where"] = f"({kwargs['where']}) AND ({where_condition})"
         else:
             kwargs["where"] = where_condition
-            
-        # Calculate expected record count for time range to optimize fetching
-        try:
-            # Try to parse dates to estimate record count
-            start_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
-            end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
-            time_span_hours = (end_dt - start_dt).total_seconds() / 3600
-            
-            # Most datasets have 15-minute intervals (4 records per hour)
-            est_records = int(time_span_hours * 4)
-            
-            # If estimated record count is very large, increase the batch size 
-            # to the maximum allowed to reduce API calls
-            if est_records > 1000:
-                batch_size = 100  # API maximum
-                
-            # If it's a small dataset, reduce default max_batches to avoid unnecessary API calls
-            if est_records < 500 and "max_batches" not in kwargs:
-                kwargs["max_batches"] = max(10, est_records // batch_size + 2)
-                
-        except (ValueError, TypeError):
-            # If we can't parse the dates, use the default settings
-            pass
-            
-        # Pass the optimized batch size to fetch_complete_dataset
-        return self.fetch_complete_dataset(dataset, batch_size=batch_size, **kwargs)
 
-    def aggregate_by_field(
-        self,
-        records: Records,
-        field: str,
-        agg_fields: Dict[str, str]
-    ) -> Records:
-        """
-        Aggregate records by a specific field using specified aggregation functions.
-        
-        Args:
-            records: Records object to aggregate
-            field: Field to group by
-            agg_fields: Dictionary mapping field names to aggregation functions
-                       (e.g., {"value": "sum", "time": "max"})
-                       or lists of aggregation functions 
-                       (e.g., {"value": ["sum", "mean", "max"], "time": "max"})
-                       
-        Returns:
-            Records object with aggregated data
-            
-        Example:
-            >>> processor = EliaDataProcessor()
-            >>> data = processor.fetch_complete_dataset(Dataset.SOLAR_GENERATION)
-            >>> daily_sum = processor.aggregate_by_field(
-            ...     data,
-            ...     "date",
-            ...     {"solar_power": "sum", "datetime": "max"}
-            ... )
-        """
-        pd = records._ensure_dependencies("pandas")
-        
-        # Convert to pandas for aggregation
-        df = records.to_pandas()
-        
-        # Make a copy to avoid warnings and verify the field exists
-        if field not in df.columns:
-            raise ValueError(f"Field '{field}' not found in records. Available fields: {list(df.columns)}")
-            
-        # Perform groupby and aggregation
-        grouped = df.groupby(field).agg(agg_fields)
-        
-        # Reset index to make the groupby field a column again
-        result_df = grouped.reset_index()
-        
-        # Convert back to Records format
-        records_data = []
-        for _, row in result_df.iterrows():
-            # Convert Series to dict and handle NaN values
-            fields_dict = {}
-            for col_name, value in row.items():
-                if pd.isna(value):  # Handle NaN values
-                    fields_dict[col_name] = None
-                elif isinstance(value, (pd.Timestamp, datetime)):
-                    # Convert timestamps to ISO format strings
-                    fields_dict[col_name] = value.isoformat()
-                else:
-                    fields_dict[col_name] = value
-                    
-            records_data.append({"record": {"fields": fields_dict}})
-        
-        return Records({
-            "total_count": len(records_data),
-            "records": records_data,
-            "links": []
-        })
+        # Fetch all records with pagination
+        all_records = []
+        offset = 0
+        limit = kwargs.get("limit", 100)  # Default batch size
 
-    def to_dataframe(
-        self,
-        records: Records,
-        output_format: str = "pandas"
-    ) -> Any:
-        """
-        Convert Records to the specified DataFrame format.
-        
-        Args:
-            records: Records object to convert
-            output_format: Target format ("pandas", "polars", or "numpy")
-            
-        Returns:
-            DataFrame in the specified format
-        """
-        formats = {
-            "pandas": records.to_pandas,
-            "polars": records.to_polars,
-            "numpy": records.to_numpy
-        }
-        
-        if output_format not in formats:
-            raise ValueError(
-                f"Unsupported output format: {output_format}. "
-                f"Supported formats: {list(formats.keys())}"
+        while True:
+            response = self.client.get_records(
+                dataset_id,
+                limit=limit,
+                offset=offset,
+                **kwargs
             )
-            
-        return formats[output_format]()
+            batch_records = response.get("results", [])
+
+            if not batch_records:
+                break
+
+            all_records.extend(batch_records)
+
+            # Check if we got fewer records than requested (end of data)
+            if len(batch_records) < limit:
+                break
+
+            offset += limit
+
+        return self._format_output(all_records)
+
+    def _format_output(self, records: List[dict]) -> Any:
+        """
+        Format the output according to the specified return type.
+
+        Args:
+            records: List of record dictionaries
+
+        Returns:
+            Data in the specified format
+        """
+        if self.return_type == "json":
+            return records
+        elif self.return_type == "pandas":
+            return pd.DataFrame(records)
+        elif self.return_type == "polars":
+            return pl.DataFrame(records)
+        else:
+            raise ValueError(f"Unsupported return type: {self.return_type}")
