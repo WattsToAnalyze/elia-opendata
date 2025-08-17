@@ -1,266 +1,349 @@
+"""Data processing utilities for Elia OpenData API.
+
+This module provides high-level data processing capabilities for working with
+This module provides high-level data processing capabilities for working with
+Elia OpenData datasets. It offers convenient methods for fetching and
+formatting data from the API, with support for multiple output formats
+including JSON, Pandas DataFrames, and Polars DataFrames.
+
+The main class, EliaDataProcessor, handles common data retrieval patterns
+such as fetching the most recent values or retrieving data within specific
+date ranges. It automatically handles pagination for large datasets and
+provides consistent output formatting.
+
+Example:
+    Basic usage with different return types:
+
+    >>> from elia_opendata.data_processor import EliaDataProcessor
+    >>> from elia_opendata.dataset_catalog import TOTAL_LOAD
+
+    >>> # JSON output (default)
+    >>> processor = EliaDataProcessor()
+    >>> data = processor.fetch_current_value(TOTAL_LOAD)
+    >>> print(type(data))  # <class 'list'>
+
+    >>> # Pandas DataFrame output
+    >>> processor = EliaDataProcessor(return_type="pandas")
+    >>> df = processor.fetch_current_value(TOTAL_LOAD)
+    >>> print(type(df))  # <class 'pandas.core.frame.DataFrame'>
+
+    >>> # Date range query
+    >>> from datetime import datetime
+    >>> start = datetime(2023, 1, 1)
+    >>> end = datetime(2023, 1, 31)
+    >>> monthly_data = processor.fetch_data_between(TOTAL_LOAD, start, end)
 """
-Data processing utilities for Elia OpenData API.
-"""
-from typing import List, Union, Optional, Dict, Any, Iterator
+from typing import Optional, Any, Union, List
 from datetime import datetime
 import logging
+import pandas as pd
+import polars as pl
+
 from .client import EliaClient
-from .models import Records
-from .datasets import Dataset
+
+DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 logger = logging.getLogger(__name__)
 
+
 class EliaDataProcessor:
+    """High-level data processor for Elia OpenData datasets.
+
+    This class provides convenient methods for fetching and processing data
+    from the Elia OpenData API. It supports multiple output formats and handles
+    common data retrieval patterns automatically.
+
+    The processor can return data in three formats:
+    - JSON: Raw list of dictionaries (default)
+    - Pandas: pandas.DataFrame for data analysis
+    - Polars: polars.DataFrame for high-performance data processing
+
+    Attributes:
+        client (EliaClient): The underlying API client for making requests.
+        return_type (str): The format for returned data ("json", "pandas",
+            or "polars").
+
+    Example:
+        Basic usage:
+
+        >>> processor = EliaDataProcessor()
+        >>> current_data = processor.fetch_current_value("ods001")
+
+        With custom client and return type:
+
+        >>> from elia_opendata.client import EliaClient
+        >>> client = EliaClient(api_key="your_key")
+        >>> processor = EliaDataProcessor(client=client, return_type="pandas")
+        >>> df = processor.fetch_current_value("ods032")
+        >>> print(df.head())
+
+        Date range queries:
+
+        >>> from datetime import datetime
+        >>> start = datetime(2023, 1, 1)
+        >>> end = datetime(2023, 1, 31)
+        >>> data = processor.fetch_data_between("ods001", start, end)
     """
-    Data processing utilities for working with Elia OpenData datasets.
-    Handles pagination, data fetching, and aggregation operations.
-    """
-    
-    def __init__(self, client: Optional[EliaClient] = None):
-        """
-        Initialize the data processor.
-        
+
+    def __init__(
+        self,
+        client: Optional[EliaClient] = None,
+        return_type: str = "json"
+    ):
+        """Initialize the data processor.
+
         Args:
-            client: EliaClient instance. If not provided, creates a new one.
+            client: EliaClient instance for making API requests. If None,
+                a new client with default settings will be created
+                automatically.
+            return_type: Output format for processed data. Must be one of:
+                - "json": Returns raw list of dictionaries (default)
+                - "pandas": Returns pandas.DataFrame
+                - "polars": Returns polars.DataFrame
+
+        Raises:
+            ValueError: If return_type is not one of the supported formats.
+
+        Example:
+            Default initialization:
+
+            >>> processor = EliaDataProcessor()
+
+            With custom client:
+
+            >>> from elia_opendata.client import EliaClient
+            >>> client = EliaClient(api_key="your_key", timeout=60)
+            >>> processor = EliaDataProcessor(client=client)
+
+            With pandas output:
+
+            >>> processor = EliaDataProcessor(return_type="pandas")
         """
         self.client = client or EliaClient()
-    
-    def fetch_complete_dataset(
+        if return_type not in ["json", "pandas", "polars"]:
+            raise ValueError(
+                f"Invalid return_type: {return_type}. "
+                f"Must be 'json', 'pandas', or 'polars'"
+            )
+        self.return_type = return_type
+
+    def fetch_current_value(
         self,
-        dataset: Union[Dataset, str],
-        batch_size: int = 100,  # Set to API maximum limit (100)
+        dataset_id: str,
         **kwargs
-    ) -> Records:
-        """
-        Fetch all records from a dataset, handling pagination automatically.
-        
+    ) -> Any:
+        """Fetch the most recent value from a dataset.
+
+        This method retrieves the single most recent record from the specified
+        dataset by automatically setting limit=1 and ordering by datetime in
+        descending order.
+
         Args:
-            dataset: Dataset enum or ID string
-            batch_size: Number of records per batch (default: 100, max allowed by API)
-            max_batches: Maximum number of batches to fetch (default: 1000)
-            **kwargs: Additional query parameters
-            
+            dataset_id: Unique identifier for the dataset to query. Use
+                constants from dataset_catalog module (e.g., TOTAL_LOAD).
+            **kwargs: Additional query parameters to pass to the API:
+                - where: Filter condition in OData format
+                - select: Comma-separated list of fields to retrieve
+                - Any other parameters supported by the API
+
         Returns:
-            Records object containing all records from the dataset
+            The most recent record(s) in the format specified by return_type:
+            - If return_type="json": List containing one dictionary
+            - If return_type="pandas": pandas.DataFrame with one row
+            - If return_type="polars": polars.DataFrame with one row
+
+        Example:
+            Get current total load:
+
+            >>> from elia_opendata.dataset_catalog import TOTAL_LOAD
+            >>> processor = EliaDataProcessor()
+            >>> current = processor.fetch_current_value(TOTAL_LOAD)
+            >>> print(current[0]['datetime'])  # Most recent timestamp
+
+            With filtering:
+
+            >>> current_measured = processor.fetch_current_value(
+            ...     TOTAL_LOAD,
+            ...     where="type='measured'"
+            ... )
+
+            As pandas DataFrame:
+
+            >>> processor = EliaDataProcessor(return_type="pandas")
+            >>> df = processor.fetch_current_value(TOTAL_LOAD)
+            >>> print(df.iloc[0]['value'])  # Most recent value
         """
-        logger.info(f"Fetching complete dataset {dataset}")
-        all_records = []
-        total_count = 0
-        
-        # Ensure batch_size doesn't exceed API limit
-        batch_size = min(batch_size, 100)  # API limit is 100
-        
-        # Set a maximum number of batches to prevent infinite loops
-        max_batches = kwargs.pop("max_batches", 1000)  # Default to 1000 batches max
-        batch_count = 0
-        empty_batch_count = 0
-        max_empty_batches = 3  # Stop after 3 consecutive empty batches
+        logger.info("Fetching current value for dataset %s", dataset_id)
 
-        try:
-            for batch in self.client.iter_records(dataset, batch_size=batch_size, **kwargs):
-                # Keep track of total count for early termination
-                if total_count == 0 and batch.total_count > 0:
-                    total_count = batch.total_count
-                
-                if not batch.records:
-                    empty_batch_count += 1
-                    if empty_batch_count >= max_empty_batches:
-                        logger.warning(f"Received {max_empty_batches} consecutive empty batches, stopping.")
-                        break
-                    continue
-                else:
-                    empty_batch_count = 0  # Reset empty batch counter
-                
-                all_records.extend(batch.records)
-                batch_count += 1
-                logger.debug(f"Fetched {len(all_records)}/{total_count} records (batch {batch_count})")
-                
-                # Safety check to prevent infinite loops
-                if batch_count >= max_batches:
-                    logger.warning(f"Reached maximum batch count ({max_batches}), stopping.")
-                    break
-                
-                # Early termination if we have all data
-                if total_count > 0 and len(all_records) >= total_count:
-                    logger.debug("Fetched all available records based on count.")
-                    break
-                
-                # Check if we've reached the end of pagination
-                if not batch.has_next:
-                    logger.debug("No more pages available.")
-                    break
-        except Exception as e:
-            # Don't lose data if we hit an error after fetching some records
-            logger.error(f"Error during data fetching: {str(e)}")
-            if not all_records:
-                # Re-raise if we didn't get any records
-                raise
+        # Get the most recent record by limiting to 1 and ordering by
+        # datetime desc
+        kwargs["limit"] = 1
+        if "order_by" not in kwargs:
+            kwargs["order_by"] = "-datetime"
 
-        # Create a new Records object with all data
-        return Records({
-            "total_count": len(all_records),  # Use actual count of records fetched
-            "records": all_records,
-            "links": []  # No pagination links needed for complete dataset
-        })
+        records = self.client.get_records(dataset_id, **kwargs)
 
-    def fetch_date_range(
+        return self._format_output(records)
+
+    def fetch_data_between(
         self,
-        dataset: Union[Dataset, str],
+        dataset_id: str,
         start_date: Union[str, datetime],
         end_date: Union[str, datetime],
-        batch_size: int = 100,  # Use API maximum as default
         **kwargs
-    ) -> Records:
-        """
-        Fetch all records between two dates, handling pagination automatically.
-        
+    ) -> Any:
+        """Fetch data between two dates with automatic pagination.
+
+        This method retrieves all records from the specified dataset within
+        the given date range. It automatically handles pagination to fetch
+        large datasets completely, combining multiple API requests as needed.
+
         Args:
-            dataset: Dataset enum or ID string
-            start_date: Start date (ISO format string or datetime)
-            end_date: End date (ISO format string or datetime) 
-            batch_size: Number of records per batch (default: 100, which is API maximum)
-            max_batches: Maximum number of batches to fetch
-            **kwargs: Additional query parameters
-            
+            dataset_id: Unique identifier for the dataset to query. Use
+                constants from dataset_catalog module.
+            start_date: Start date for the query range. Can be either:
+                - datetime object
+                - ISO format string (e.g., "2023-01-01T00:00:00")
+            end_date: End date for the query range. Can be either:
+                - datetime object
+                - ISO format string (e.g., "2023-01-31T23:59:59")
+            **kwargs: Additional query parameters:
+                - where: Additional filter conditions (combined with date
+                  filter)
+                - limit: Batch size for pagination (default: 100)
+                - order_by: Sort order for results
+                - select: Comma-separated fields to retrieve
+                - Any other API-supported parameters
+
         Returns:
-            Records object containing all records in the date range
+            All matching records in the format specified by return_type:
+            - If return_type="json": List of dictionaries
+            - If return_type="pandas": pandas.DataFrame
+            - If return_type="polars": polars.DataFrame
+
+        Note:
+            The method automatically paginates through all results. For very
+            large date ranges, consider using smaller batch sizes by setting
+            the 'limit' parameter in kwargs.
+
+        Example:
+            Fetch data for January 2023:
+
+            >>> from datetime import datetime
+            >>> from elia_opendata.dataset_catalog import TOTAL_LOAD
+            >>> processor = EliaDataProcessor()
+            >>> start = datetime(2023, 1, 1)
+            >>> end = datetime(2023, 1, 31, 23, 59, 59)
+            >>> data = processor.fetch_data_between(TOTAL_LOAD, start, end)
+            >>> print(f"Retrieved {len(data)} records")
+
+            With string dates:
+
+            >>> data = processor.fetch_data_between(
+            ...     TOTAL_LOAD,
+            ...     "2023-01-01T00:00:00",
+            ...     "2023-01-31T23:59:59"
+            ... )
+
+            With additional filtering:
+
+            >>> measured_data = processor.fetch_data_between(
+            ...     TOTAL_LOAD,
+            ...     start,
+            ...     end,
+            ...     where="type='measured'",
+            ...     limit=500  # Larger batch size
+            ... )
+
+            As pandas DataFrame:
+
+            >>> processor = EliaDataProcessor(return_type="pandas")
+            >>> df = processor.fetch_data_between(TOTAL_LOAD, start, end)
+            >>> print(df.describe())  # Statistical summary
         """
-        # Ensure we're using proper ISO format strings for the API query
-        if isinstance(start_date, datetime):
-            # Keep milliseconds for more precise filtering
-            start_date = start_date.isoformat()
-        if isinstance(end_date, datetime):
-            end_date = end_date.isoformat()
-            
-        logger.info(f"Fetching dataset {dataset} between {start_date} and {end_date}")
         
-        # Ensure batch_size doesn't exceed API limit
-        batch_size = min(batch_size, 100)  # API limit is 100
+        if isinstance(start_date, datetime):
+            start_date = start_date.strftime(DATETIME_FORMAT)
             
+        if isinstance(end_date, datetime):
+            end_date = end_date.strftime(DATETIME_FORMAT)
+
+        logger.info(
+            "Fetching data for dataset %s between %s and %s",
+            dataset_id, start_date, end_date
+        )
+
         # Build the date filter condition
-        where_condition = f"datetime >= '{start_date}' AND datetime <= '{end_date}'"
+        where_condition = (
+            f"datetime IN [date'{start_date}'..date'{end_date}']"
+        )
         if "where" in kwargs:
             kwargs["where"] = f"({kwargs['where']}) AND ({where_condition})"
         else:
             kwargs["where"] = where_condition
-            
-        # Calculate expected record count for time range to optimize fetching
-        try:
-            # Try to parse dates to estimate record count
-            start_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
-            end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
-            time_span_hours = (end_dt - start_dt).total_seconds() / 3600
-            
-            # Most datasets have 15-minute intervals (4 records per hour)
-            est_records = int(time_span_hours * 4)
-            
-            # If estimated record count is very large, increase the batch size 
-            # to the maximum allowed to reduce API calls
-            if est_records > 1000:
-                batch_size = 100  # API maximum
-                
-            # If it's a small dataset, reduce default max_batches to avoid unnecessary API calls
-            if est_records < 500 and "max_batches" not in kwargs:
-                kwargs["max_batches"] = max(10, est_records // batch_size + 2)
-                
-        except (ValueError, TypeError):
-            # If we can't parse the dates, use the default settings
-            pass
-            
-        # Pass the optimized batch size to fetch_complete_dataset
-        return self.fetch_complete_dataset(dataset, batch_size=batch_size, **kwargs)
 
-    def aggregate_by_field(
-        self,
-        records: Records,
-        field: str,
-        agg_fields: Dict[str, str]
-    ) -> Records:
-        """
-        Aggregate records by a specific field using specified aggregation functions.
-        
-        Args:
-            records: Records object to aggregate
-            field: Field to group by
-            agg_fields: Dictionary mapping field names to aggregation functions
-                       (e.g., {"value": "sum", "time": "max"})
-                       or lists of aggregation functions 
-                       (e.g., {"value": ["sum", "mean", "max"], "time": "max"})
-                       
-        Returns:
-            Records object with aggregated data
-            
-        Example:
-            >>> processor = EliaDataProcessor()
-            >>> data = processor.fetch_complete_dataset(Dataset.SOLAR_GENERATION)
-            >>> daily_sum = processor.aggregate_by_field(
-            ...     data,
-            ...     "date",
-            ...     {"solar_power": "sum", "datetime": "max"}
-            ... )
-        """
-        pd = records._ensure_dependencies("pandas")
-        
-        # Convert to pandas for aggregation
-        df = records.to_pandas()
-        
-        # Make a copy to avoid warnings and verify the field exists
-        if field not in df.columns:
-            raise ValueError(f"Field '{field}' not found in records. Available fields: {list(df.columns)}")
-            
-        # Perform groupby and aggregation
-        grouped = df.groupby(field).agg(agg_fields)
-        
-        # Reset index to make the groupby field a column again
-        result_df = grouped.reset_index()
-        
-        # Convert back to Records format
-        records_data = []
-        for _, row in result_df.iterrows():
-            # Convert Series to dict and handle NaN values
-            fields_dict = {}
-            for col_name, value in row.items():
-                if pd.isna(value):  # Handle NaN values
-                    fields_dict[col_name] = None
-                elif isinstance(value, (pd.Timestamp, datetime)):
-                    # Convert timestamps to ISO format strings
-                    fields_dict[col_name] = value.isoformat()
-                else:
-                    fields_dict[col_name] = value
-                    
-            records_data.append({"record": {"fields": fields_dict}})
-        
-        return Records({
-            "total_count": len(records_data),
-            "records": records_data,
-            "links": []
-        })
+        # Fetch all records with pagination
+        all_records = []
+        offset = 0
+        # Remove limit from kwargs to avoid duplication
+        limit = kwargs.pop("limit", 100)
 
-    def to_dataframe(
-        self,
-        records: Records,
-        output_format: str = "pandas"
-    ) -> Any:
-        """
-        Convert Records to the specified DataFrame format.
-        
-        Args:
-            records: Records object to convert
-            output_format: Target format ("pandas", "polars", or "numpy")
-            
-        Returns:
-            DataFrame in the specified format
-        """
-        formats = {
-            "pandas": records.to_pandas,
-            "polars": records.to_polars,
-            "numpy": records.to_numpy
-        }
-        
-        if output_format not in formats:
-            raise ValueError(
-                f"Unsupported output format: {output_format}. "
-                f"Supported formats: {list(formats.keys())}"
+        while True:
+
+            batch_records = self.client.get_records(
+                dataset_id,
+                limit=limit,
+                offset=offset,
+                **kwargs
             )
+
+            if not batch_records:
+                break
+
+            all_records.extend(batch_records)
+
+            # Check if we got fewer records than requested (end of data)
+            if len(batch_records) < limit:
+                break
+
+            offset += limit
             
-        return formats[output_format]()
+            if limit + offset > 10000:
+                break
+
+        return self._format_output(all_records)
+
+    def _format_output(self, records: List[dict]) -> Any:
+        """Format the output according to the specified return type.
+
+        This private method converts the raw list of record dictionaries
+        into the format specified by the processor's return_type setting.
+
+        Args:
+            records: List of record dictionaries from the API response.
+                Each dictionary represents a single data record with
+                fields like 'datetime', 'value', etc.
+
+        Returns:
+            Formatted data in the specified return type:
+            - If return_type="json": Returns the input list unchanged
+            - If return_type="pandas": Returns pandas.DataFrame
+            - If return_type="polars": Returns polars.DataFrame
+
+        Raises:
+            ValueError: If the return_type is not supported (should not occur
+                if properly initialized).
+
+        Note:
+            This is a private method intended for internal use only. The
+            conversion handles empty record lists gracefully by returning
+            empty DataFrames for pandas/polars formats.
+        """
+        if self.return_type == "json":
+            return records
+        elif self.return_type == "pandas":
+            return pd.DataFrame(records)
+        elif self.return_type == "polars":
+            return pl.DataFrame(records)
+        else:
+            raise ValueError(f"Unsupported return type: {self.return_type}")

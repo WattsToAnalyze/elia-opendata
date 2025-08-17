@@ -6,25 +6,23 @@ A library for accessing the Elia Open Data Portal API.
 
 Basic usage:
 
-    >>> from elia_opendata import EliaClient, EliaDataProcessor, Dataset
+    >>> from elia_opendata import EliaClient, EliaDataProcessor
     >>> # Basic client usage
     >>> client = EliaClient()
-    >>> datasets = client.get_datasets()
-    >>> 
+    >>> data = client.get_records("ods032", limit=100)
+
     >>> # Advanced data processing
     >>> processor = EliaDataProcessor(client)
-    >>> complete_data = processor.fetch_complete_dataset(Dataset.SOLAR_GENERATION)
-    >>> df = processor.to_dataframe(complete_data, output_format="pandas")
+    >>> complete_data = processor.fetch_current_value("ods032")
 
 Full documentation is available at [docs link].
 """
 
 from .client import EliaClient
 from .error import EliaError, RateLimitError, AuthError
-from .datasets import Dataset, DatasetCategory
 from .data_processor import EliaDataProcessor
 
-__version__ = "0.2.1"
+__version__ = "1.0.0"
 __author__ = "WattsToAnalyze"
 
 __all__ = [
@@ -33,6 +31,4 @@ __all__ = [
     'EliaError',
     'RateLimitError',
     'AuthError',
-    'Dataset',
-    'DatasetCategory',
 ]

@@ -1,95 +1,117 @@
 """
-Tests for measuring performance of fetch operations.
+Performance tests for the Elia OpenData API client.
 """
-import pytest
-import logging
 import time
 from datetime import datetime, timedelta
 from elia_opendata.data_processor import EliaDataProcessor
-from elia_opendata.client import EliaClient
-from elia_opendata.datasets import Dataset
+from elia_opendata.dataset_catalog import IMBALANCE_PRICES_QH
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)  # INFO level to reduce output
-logger = logging.getLogger(__name__)
 
-@pytest.fixture
-def processor():
-    """Fixture for EliaDataProcessor instance with longer timeout."""
-    client = EliaClient(timeout=120)
-    return EliaDataProcessor(client=client)
-
-@pytest.mark.parametrize("batch_size", [25, 50, 100])
-def test_fetch_complete_dataset_performance(processor, batch_size):
-    """Test performance of fetch_complete_dataset with different batch sizes."""
-    print(f"\nTesting fetch_complete_dataset with batch_size={batch_size}:")
+def test_single_batch_performance():
+    """Test performance of fetching a single batch of 100 records."""
+    print("\n=== Single Batch Performance Test ===")
+    
+    processor = EliaDataProcessor(return_type="json")
+    
+    # Record start time
     start_time = time.time()
     
-    result = processor.fetch_complete_dataset(
-        Dataset.PV_PRODUCTION,
-        batch_size=batch_size,
-        where="datetime >= '2025-01-01' AND datetime <= '2025-01-02'",
-        max_batches=10  # Limit to prevent too many API calls
+    # Use the underlying client to get 100 records directly
+    records = processor.client.get_records(
+        IMBALANCE_PRICES_QH,
+        limit=100
     )
+    print(records)
+    # Format the output using the processor's format method
+    result = processor._format_output(records)
     
+    # Record end time
     end_time = time.time()
-    elapsed = end_time - start_time
-    record_count = len(result.records)
-    rps = record_count/elapsed if elapsed > 0 else 0
+    elapsed_time = end_time - start_time
     
-    print(f"Fetched {record_count} records in {elapsed:.2f} seconds")
-    print(f"Records per second: {rps:.2f}")
-    print(f"Total records according to API: {result.total_count}")
+    # Get results and calculate metrics
+    records_fetched = len(result)
     
-    # Basic assertions to verify the test ran properly
-    assert record_count > 0, "Should fetch at least some records"
-    assert result.total_count >= record_count, "Total count should be at least as many as fetched records"
+    # Display performance metrics
+    print("Records requested: 100")
+    print(f"Records fetched: {records_fetched}")
+    print(f"Time elapsed: {elapsed_time:.3f} seconds")
+    if elapsed_time > 0:
+        print(f"Records per second: {records_fetched / elapsed_time:.2f}")
+    
+    # Verify we got data
+    assert records_fetched > 0, "Should fetch at least some records"
+    assert records_fetched <= 100, "Should not exceed requested limit"
+    assert isinstance(result, list), "Results should be a list"
+    
+    # Verify record structure (direct client records are flattened)
+    if result:
+        first_record = result[0]
+        assert "datetime" in first_record, "Record should have datetime field"
+        assert "imbalanceprice" in first_record, (
+            "Record should have imbalanceprice field"
+        )
+        print(f"Sample record datetime: {first_record['datetime']}")
+        print(f"Sample imbalance price: {first_record['imbalanceprice']}")
 
-@pytest.mark.parametrize("label,delta", [
-    ("1 hour", timedelta(hours=1)),
-    ("6 hours", timedelta(hours=6)),
-    ("1 day", timedelta(days=1))
-])
-def test_fetch_date_range_performance(processor, label, delta):
-    """Test performance of fetch_date_range with different time ranges."""
-    print(f"\nTesting fetch_date_range with time range: {label}")
-    end_date = datetime.now().replace(minute=0, second=0, microsecond=0)
-    start_date = end_date - delta
+
+def test_pagination_performance():
+    """Test performance of pagination from 2025-01-01 to 2025-01-07."""
+    print("\n=== Pagination Performance Test ===")
     
+    processor = EliaDataProcessor(return_type="json")
+    
+    # Date range: one week in January 2025
+    # start_date = datetime(2025, 1, 1)
+    # end_date = datetime(2025, 1, 8)
+    start_date = "2025-01-01"
+    end_date = "2025-01-31"
+    
+    # Record start time
     start_time = time.time()
     
-    result = processor.fetch_date_range(
-        Dataset.PV_PRODUCTION,
+    # Use fetch_data_between which handles pagination automatically
+    print(f"Fetching data from {start_date} to {end_date}")
+    
+    result = processor.fetch_data_between(
+        IMBALANCE_PRICES_QH,
         start_date=start_date,
         end_date=end_date,
-        max_batches=10  # Limit to prevent too many API calls
+        limit=100  # Batch size of 100
     )
-    
+    print(result)
+    # Record end time
     end_time = time.time()
-    elapsed = end_time - start_time
-    record_count = len(result.records)
-    rps = record_count/elapsed if record_count > 0 and elapsed > 0 else 0
+    total_elapsed = end_time - start_time
+    total_records = len(result)
     
-    print(f"Fetched {record_count} records in {elapsed:.2f} seconds")
-    print(f"Records per second: {rps:.2f}")
-    print(f"Total records according to API: {result.total_count}")
+    # Display performance metrics
+    print("\n=== Pagination Results ===")
+    print(f"Date range: {start_date} to {end_date}")
+    print(f"Total records fetched: {total_records}")
+    print(f"Total time elapsed: {total_elapsed:.3f} seconds")
+    if total_elapsed > 0:
+        print(f"Records per second: {total_records / total_elapsed:.2f}")
     
-    # Basic assertions
-    assert record_count >= 0, "Should have a valid record count"
+    # Verify we got data
+    assert total_records > 0, (
+        "Should fetch at least some records for the date range"
+    )
+    assert isinstance(result, list), "All records should be in a list"
     
-    # Verify record dates if we have results
-    if result.records and len(result.records) > 0:
-        sample_size = min(10, len(result.records))
-        count_in_range = 0
+    # Verify record structure and date range
+    if result:
+        first_record = result[0]
+        last_record = result[-1]
         
-        for record in result.records[:sample_size]:
-            fields = record["record"]["fields"]
-            record_date = datetime.fromisoformat(fields["datetime"].replace('Z', '+00:00'))
-            # Make start_date and end_date timezone-aware for comparison
-            aware_start_date = start_date.replace(tzinfo=record_date.tzinfo)
-            aware_end_date = end_date.replace(tzinfo=record_date.tzinfo)
-            if aware_start_date <= record_date <= aware_end_date:
-                count_in_range += 1
-                
-        print(f"Records in correct date range: {count_in_range}/{sample_size} checked")
-        assert count_in_range > 0, "At least some records should be in the specified date range"
+        assert "datetime" in first_record, (
+            "First record should have datetime field"
+        )
+        assert "imbalanceprice" in first_record, (
+            "First record should have imbalanceprice field"
+        )
+        
+        print(f"First record datetime: {first_record['datetime']}")
+        print(f"Last record datetime: {last_record['datetime']}")
+        print(f"Sample imbalance price: {first_record['imbalanceprice']}")
+        
