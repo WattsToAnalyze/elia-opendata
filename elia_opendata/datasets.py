@@ -3,6 +3,7 @@ Mapping of human-readable dataset names to Elia OpenData dataset IDs.
 """
 from enum import Enum
 
+
 class DatasetCategory(str, Enum):
     """Categories of Elia OpenData datasets."""
     CONSUMPTION = "consumption"
@@ -12,6 +13,7 @@ class DatasetCategory(str, Enum):
     CONGESTION = "congestion"
     CAPACITY = "capacity"
     BIDDING = "bidding"
+
 
 class Dataset(str, Enum):
     """
