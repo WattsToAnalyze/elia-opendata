@@ -1,0 +1,82 @@
+site_name: Elia OpenData Python Package
+site_description: A Python interface to the Elia OpenData API for Belgian electricity data
+site_author: WattsToAnalyze
+site_url: https://wattstoanalyze.github.io/elia-opendata/
+repo_name: WattsToAnalyze/elia-opendata
+repo_url: https://github.com/WattsToAnalyze/elia-opendata
+edit_uri: edit/main/docs/
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Examples: examples.md
+  - API Reference:
+    - Client: reference/client.md
+    - Data Processor: reference/data_processor.md
+    - Dataset Catalog: reference/dataset_catalog.md
+    - Exceptions: reference/error.md
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.indexes
+    - navigation.top
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.action.edit
+
+plugins:
+  - search
+  - autorefs
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [.]
+          options:
+            docstring_style: google
+            docstring_options:
+              ignore_init_summary: true
+            merge_init_into_class: true
+            show_source: false
+            show_signature_annotations: true
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/WattsToAnalyze/elia-opendata
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/elia-opendata/
