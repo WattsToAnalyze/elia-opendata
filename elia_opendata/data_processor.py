@@ -16,17 +16,17 @@ Example:
 
     >>> from elia_opendata.data_processor import EliaDataProcessor
     >>> from elia_opendata.dataset_catalog import TOTAL_LOAD
-    
+
     >>> # JSON output (default)
     >>> processor = EliaDataProcessor()
     >>> data = processor.fetch_current_value(TOTAL_LOAD)
     >>> print(type(data))  # <class 'list'>
-    
+
     >>> # Pandas DataFrame output
     >>> processor = EliaDataProcessor(return_type="pandas")
     >>> df = processor.fetch_current_value(TOTAL_LOAD)
     >>> print(type(df))  # <class 'pandas.core.frame.DataFrame'>
-    
+
     >>> # Date range query
     >>> from datetime import datetime
     >>> start = datetime(2023, 1, 1)

@@ -27,5 +27,9 @@ test = [
     "pytest>=7.0.0",
     "responses>=0.23.0",
     "pytest-cov>=4.0.0",
-    "flake8>=6.0.0"
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+    "types-requests>=2.25.0",
+    "pandas-stubs>=2.0.0",
+    "types-pytz>=2023.0.0"
 ]
