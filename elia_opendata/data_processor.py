@@ -44,7 +44,7 @@ import polars as pl
 
 from .client import EliaClient
 
-DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+DATE_FORMAT = "%Y-%m-%d"
 
 logger = logging.getLogger(__name__)
 
@@ -226,10 +226,10 @@ class EliaDataProcessor:
                 constants from dataset_catalog module.
             start_date: Start date for the query range. Can be either:
                 - datetime object
-                - ISO format string (e.g., "2023-01-01T00:00:00")
+                - ISO date string (e.g., "2023-01-01")
             end_date: End date for the query range. Can be either:
                 - datetime object
-                - ISO format string (e.g., "2023-01-31T23:59:59")
+                - ISO date string (e.g., "2023-01-31")
             **kwargs: Additional query parameters:
                 - export_data (bool): If True, uses the export endpoint for
                   bulk data retrieval. If False (default), uses pagination.
@@ -262,7 +262,7 @@ class EliaDataProcessor:
             from elia_opendata.dataset_catalog import TOTAL_LOAD
             processor = EliaDataProcessor()
             start = datetime(2023, 1, 1)
-            end = datetime(2023, 1, 31, 23, 59, 59)
+            end = datetime(2023, 1, 31)
             data = processor.fetch_data_between(TOTAL_LOAD, start, end)
             print(f"Retrieved {len(data)} records")
             ```
@@ -283,8 +283,8 @@ class EliaDataProcessor:
             ```python
             data = processor.fetch_data_between(
                 TOTAL_LOAD,
-                "2023-01-01T00:00:00",
-                "2023-01-31T23:59:59"
+                "2023-01-01",
+                "2023-01-31"
             )
             ```
 
@@ -310,10 +310,10 @@ class EliaDataProcessor:
         """
 
         if isinstance(start_date, datetime):
-            start_date = start_date.strftime(DATETIME_FORMAT)
+            start_date = start_date.strftime(DATE_FORMAT)
 
         if isinstance(end_date, datetime):
-            end_date = end_date.strftime(DATETIME_FORMAT)
+            end_date = end_date.strftime(DATE_FORMAT)
 
         logger.info(
             "Fetching data for dataset %s between %s and %s",

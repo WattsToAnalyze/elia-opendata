@@ -67,10 +67,9 @@ def test_get_records():
     # Test the get_records method
     client = EliaClient()
     result = client.get_records(IMBALANCE_PRICES_REALTIME, limit=2)
-    
     # Verify the response structure matches actual API
-    assert result["total_count"] == 4
-    assert len(result["results"]) == 2
-    assert result["results"][0]["datetime"] == "2025-08-17T00:00:00+00:00"
-    assert result["results"][0]["ace"] == -22.072
-    assert result["results"][1]["imbalanceprice"] == -30.258
+    assert isinstance(result, list)
+    assert len(result) == 2
+    assert result[0]["datetime"] == "2025-08-17T00:00:00+00:00"
+    assert result[0]["ace"] == -22.072
+    assert result[1]["imbalanceprice"] == -30.258

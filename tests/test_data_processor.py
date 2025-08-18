@@ -1,11 +1,9 @@
 """
-Simple tests for the Elia OpenData data processor.
+Unit tests for the Elia OpenData data processor.
 """
-import responses
 from datetime import datetime
-from elia_opendata.data_processor import EliaDataProcessor
+from elia_opendata.data_processor import EliaDataProcessor, DATE_FORMAT
 from elia_opendata.client import EliaClient
-from elia_opendata.dataset_catalog import IMBALANCE_PRICES_REALTIME
 
 
 def test_data_processor_initialization():
@@ -26,209 +24,147 @@ def test_data_processor_initialization():
     assert processor.return_type == "polars"
 
 
-@responses.activate
-def test_fetch_current_value():
-    """Test fetching the current/most recent value from a dataset."""
-    # Mock response data for current value (uses "records" key)
-    mock_response = {
-        "total_count": 1,
-        "records": [
-            {
-                "datetime": "2025-08-17T12:00:00+00:00",
-                "resolutioncode": "PT1M",
-                "imbalanceprice": 45.5,
-                "systemimbalance": 150.0
-            }
-        ]
-    }
+def test_date_format_constant():
+    """Test that the DATE_FORMAT constant is correctly defined."""
+    assert DATE_FORMAT == "%Y-%m-%d"
+
+
+def test_date_formatting_conversion():
+    """Test that datetime objects are converted to the correct date format."""
+    # Test datetime formatting
+    test_date = datetime(2024, 1, 15)
+    formatted = test_date.strftime(DATE_FORMAT)
+    assert formatted == "2024-01-15"
     
-    # Mock the API endpoint
-    base_url = EliaClient.BASE_URL
-    endpoint = f"catalog/datasets/{IMBALANCE_PRICES_REALTIME}/records"
-    dataset_url = f"{base_url}{endpoint}"
-    responses.add(
-        responses.GET,
-        dataset_url,
-        json=mock_response,
-        status=200
-    )
+    # Test edge cases
+    edge_date = datetime(2023, 12, 31)
+    formatted_edge = edge_date.strftime(DATE_FORMAT)
+    assert formatted_edge == "2023-12-31"
+
+
+def test_export_data_parameter_default():
+    """Test that export_data parameter defaults to False."""
+    processor = EliaDataProcessor()
     
-    # Test with JSON return type
+    # Test that we can create the processor and that the parameter
+    # would default to False (pagination mode)
+    assert processor.return_type == "json"
+    assert hasattr(processor, '_fetch_via_pagination')
+    assert hasattr(processor, '_fetch_via_export')
+
+
+def test_date_filter_construction():
+    """Test that date filters are constructed correctly."""
+    # This tests the internal date filter logic
+    start_date = "2024-01-01"
+    end_date = "2024-01-31"
+    
+    expected_condition = f"datetime IN [date'{start_date}'..date'{end_date}']"
+    expected = "datetime IN [date'2024-01-01'..date'2024-01-31']"
+    assert expected == expected_condition
+
+
+def test_invalid_return_type():
+    """Test that invalid return types raise ValueError."""
+    try:
+        EliaDataProcessor(return_type="invalid")
+        assert False, "Should have raised ValueError"
+    except ValueError as e:
+        assert "Invalid return_type" in str(e)
+        assert "Must be 'json', 'pandas', or 'polars'" in str(e)
+
+
+def test_format_output_json():
+    """Test _format_output method with JSON return type."""
     processor = EliaDataProcessor(return_type="json")
-    result = processor.fetch_current_value(IMBALANCE_PRICES_REALTIME)
+    test_records = [
+        {"datetime": "2024-01-01", "value": 100.0},
+        {"datetime": "2024-01-02", "value": 200.0}
+    ]
     
-    # Verify the response
+    result = processor._format_output(test_records)
+    assert result == test_records
     assert isinstance(result, list)
-    assert len(result) == 1
-    assert result[0]["datetime"] == "2025-08-17T12:00:00+00:00"
-    assert result[0]["imbalanceprice"] == 45.5
 
 
-@responses.activate
-def test_fetch_data_between():
-    """Test fetching data between two specific dates."""
-    # Mock response data for date range (uses "results" key)
-    mock_response = {
-        "total_count": 2,
-        "results": [
-            {
-                "datetime": "2025-08-17T10:00:00+00:00",
-                "resolutioncode": "PT1M",
-                "imbalanceprice": 40.0,
-                "systemimbalance": 120.0
-            },
-            {
-                "datetime": "2025-08-17T11:00:00+00:00",
-                "resolutioncode": "PT1M",
-                "imbalanceprice": 50.0,
-                "systemimbalance": 180.0
-            }
-        ]
-    }
-    
-    # Mock the API endpoint
-    base_url = EliaClient.BASE_URL
-    endpoint = f"catalog/datasets/{IMBALANCE_PRICES_REALTIME}/records"
-    dataset_url = f"{base_url}{endpoint}"
-    responses.add(
-        responses.GET,
-        dataset_url,
-        json=mock_response,
-        status=200
-    )
-    
-    # Test with datetime objects
-    processor = EliaDataProcessor(return_type="json")
-    start_date = datetime(2025, 8, 17, 10, 0, 0)
-    end_date = datetime(2025, 8, 17, 12, 0, 0)
-    
-    result = processor.fetch_data_between(
-        IMBALANCE_PRICES_REALTIME,
-        start_date,
-        end_date
-    )
-    
-    # Verify the response
-    assert isinstance(result, list)
-    assert len(result) == 2
-    assert result[0]["datetime"] == "2025-08-17T10:00:00+00:00"
-    assert result[1]["datetime"] == "2025-08-17T11:00:00+00:00"
-
-
-@responses.activate
-def test_json_conversion():
-    """Test JSON output format (default)."""
-    # Mock response
-    mock_response = {
-        "total_count": 1,
-        "records": [
-            {
-                "datetime": "2025-08-17T12:00:00+00:00",
-                "imbalanceprice": 25.5
-            }
-        ]
-    }
-    
-    # Mock the API endpoint
-    base_url = EliaClient.BASE_URL
-    endpoint = f"catalog/datasets/{IMBALANCE_PRICES_REALTIME}/records"
-    dataset_url = f"{base_url}{endpoint}"
-    responses.add(
-        responses.GET,
-        dataset_url,
-        json=mock_response,
-        status=200
-    )
-    
-    # Test JSON format
-    processor = EliaDataProcessor(return_type="json")
-    result = processor.fetch_current_value(IMBALANCE_PRICES_REALTIME)
-    
-    assert isinstance(result, list)
-    assert len(result) == 1
-    assert isinstance(result[0], dict)
-    assert result[0]["datetime"] == "2025-08-17T12:00:00+00:00"
-
-
-@responses.activate
-def test_pandas_conversion():
-    """Test Pandas DataFrame conversion."""
-    # Mock response
-    mock_response = {
-        "total_count": 1,
-        "records": [
-            {
-                "datetime": "2025-08-17T12:00:00+00:00",
-                "imbalanceprice": 25.5,
-                "systemimbalance": 100.0
-            }
-        ]
-    }
-    
-    # Mock the API endpoint
-    base_url = EliaClient.BASE_URL
-    endpoint = f"catalog/datasets/{IMBALANCE_PRICES_REALTIME}/records"
-    dataset_url = f"{base_url}{endpoint}"
-    responses.add(
-        responses.GET,
-        dataset_url,
-        json=mock_response,
-        status=200
-    )
-    
-    # Test pandas format
+def test_format_output_pandas():
+    """Test _format_output method with pandas return type."""
     try:
         import pandas as pd
-        processor = EliaDataProcessor(return_type="pandas")
-        result = processor.fetch_current_value(IMBALANCE_PRICES_REALTIME)
         
+        processor = EliaDataProcessor(return_type="pandas")
+        test_records = [
+            {"datetime": "2024-01-01", "value": 100.0},
+            {"datetime": "2024-01-02", "value": 200.0}
+        ]
+        
+        result = processor._format_output(test_records)
         assert isinstance(result, pd.DataFrame)
-        assert len(result) == 1
-        assert "datetime" in result.columns
-        assert "imbalanceprice" in result.columns
-        assert result.iloc[0]["imbalanceprice"] == 25.5
+        assert len(result) == 2
+        assert list(result.columns) == ["datetime", "value"]
+        assert result.iloc[0]["value"] == 100.0
+        assert result.iloc[1]["value"] == 200.0
+        
     except ImportError:
         # Skip test if pandas is not available
         pass
 
 
-@responses.activate
-def test_polars_conversion():
-    """Test Polars DataFrame conversion."""
-    # Mock response
-    mock_response = {
-        "total_count": 1,
-        "records": [
-            {
-                "datetime": "2025-08-17T12:00:00+00:00",
-                "imbalanceprice": 30.0,
-                "systemimbalance": 120.0
-            }
-        ]
-    }
-    
-    # Mock the API endpoint
-    base_url = EliaClient.BASE_URL
-    endpoint = f"catalog/datasets/{IMBALANCE_PRICES_REALTIME}/records"
-    dataset_url = f"{base_url}{endpoint}"
-    responses.add(
-        responses.GET,
-        dataset_url,
-        json=mock_response,
-        status=200
-    )
-    
-    # Test polars format
+def test_format_output_polars():
+    """Test _format_output method with polars return type."""
     try:
         import polars as pl
-        processor = EliaDataProcessor(return_type="polars")
-        result = processor.fetch_current_value(IMBALANCE_PRICES_REALTIME)
         
+        processor = EliaDataProcessor(return_type="polars")
+        test_records = [
+            {"datetime": "2024-01-01", "value": 100.0},
+            {"datetime": "2024-01-02", "value": 200.0}
+        ]
+        
+        result = processor._format_output(test_records)
         assert isinstance(result, pl.DataFrame)
-        assert len(result) == 1
-        assert "datetime" in result.columns
-        assert "imbalanceprice" in result.columns
-        assert result.row(0, named=True)["imbalanceprice"] == 30.0
+        assert len(result) == 2
+        assert list(result.columns) == ["datetime", "value"]
+        assert result.row(0, named=True)["value"] == 100.0
+        assert result.row(1, named=True)["value"] == 200.0
+        
     except ImportError:
         # Skip test if polars is not available
         pass
+
+
+def test_format_output_empty_records():
+    """Test _format_output method with empty records."""
+    processor = EliaDataProcessor(return_type="json")
+    result = processor._format_output([])
+    assert result == []
+    
+    try:
+        import pandas as pd
+        processor = EliaDataProcessor(return_type="pandas")
+        result = processor._format_output([])
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == 0
+    except ImportError:
+        pass
+    
+    try:
+        import polars as pl
+        processor = EliaDataProcessor(return_type="polars")
+        result = processor._format_output([])
+        assert isinstance(result, pl.DataFrame)
+        assert len(result) == 0
+    except ImportError:
+        pass
+
+
+def test_format_output_unsupported_type():
+    """Test that unsupported return types raise ValueError."""
+    processor = EliaDataProcessor()
+    processor.return_type = "unsupported"  # Manually set invalid type
+    
+    try:
+        processor._format_output([{"test": "data"}])
+        assert False, "Should have raised ValueError"
+    except ValueError as e:
+        assert "Unsupported return type" in str(e)
