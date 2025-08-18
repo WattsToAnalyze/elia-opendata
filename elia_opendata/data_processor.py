@@ -194,7 +194,7 @@ class EliaDataProcessor:
             print(df.iloc[0]['value'])  # Most recent value
             ```
         """
-        logger.info("Fetching current value for dataset %s", dataset_id)
+        logger.debug("Fetching current value for dataset %s", dataset_id)
 
         # Get the most recent record by limiting to 1 and ordering by
         # datetime desc
@@ -315,7 +315,7 @@ class EliaDataProcessor:
         if isinstance(end_date, datetime):
             end_date = end_date.strftime(DATE_FORMAT)
 
-        logger.info(
+        logger.debug(
             "Fetching data for dataset %s between %s and %s",
             dataset_id, start_date, end_date
         )
@@ -407,7 +407,7 @@ class EliaDataProcessor:
         else:
             export_format = "json"
 
-        logger.info(
+        logger.debug(
             "Using export endpoint for dataset %s with format %s",
             dataset_id, export_format
         )

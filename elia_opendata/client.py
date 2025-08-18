@@ -169,7 +169,7 @@ class EliaClient:
             prepared = req.prepare()
 
             # Print the exact URL being used
-            print(f"Requesting: {prepared.url}")
+            logger.debug(f"Requesting: {prepared.url}")
 
             response = requests.get(
                 url,
