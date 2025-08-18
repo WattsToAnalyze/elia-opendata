@@ -10,10 +10,12 @@ records with support for filtering, pagination, and various query parameters.
 Example:
     Basic usage of the Elia client:
 
-    >>> from elia_opendata.client import EliaClient
-    >>> client = EliaClient()
-    >>> data = client.get_records("ods032", limit=100)
-    >>> print(f"Retrieved {len(data)} records")
+    ```python
+    from elia_opendata.client import EliaClient
+    client = EliaClient()
+    data = client.get_records("ods032", limit=100)
+    print(f"Retrieved {len(data)} records")
+    ```
 
 """
 import logging
@@ -50,8 +52,10 @@ class EliaClient:
     Example:
         Basic usage:
 
-        >>> client = EliaClient()
-        >>> data = client.get_records("ods032", limit=100)
+        ```python
+        client = EliaClient()
+        data = client.get_records("ods032", limit=100)
+        ```
 
     """
 
@@ -113,22 +117,28 @@ class EliaClient:
         Example:
             Basic usage:
 
-            >>> client = EliaClient()
-            >>> data = client.get_records("ods032", limit=100)
+            ```python
+            client = EliaClient()
+            data = client.get_records("ods032", limit=100)
+            ```
 
             With filtering:
 
-            >>> filtered_data = client.get_records(
-            ...     "ods001",
-            ...     where="datetime>='2023-01-01' AND datetime<'2023-02-01'",
-            ...     limit=1000,
-            ...     order_by="datetime"
-            ... )
+            ```python
+            filtered_data = client.get_records(
+                "ods001",
+                where="datetime>='2023-01-01' AND datetime<'2023-02-01'",
+                limit=1000,
+                order_by="datetime"
+            )
+            ```
 
             Pagination:
 
-            >>> page1 = client.get_records("ods032", limit=50, offset=0)
-            >>> page2 = client.get_records("ods032", limit=50, offset=50)
+            ```python
+            page1 = client.get_records("ods032", limit=50, offset=0)
+            page2 = client.get_records("ods032", limit=50, offset=50)
+            ```
         """
         url = urljoin(self.BASE_URL, f"catalog/datasets/{dataset_id}/records")
 
@@ -144,17 +154,17 @@ class EliaClient:
             params["offset"] = offset
         if where is not None:
             params["where"] = where
-        
+
         default_params = {
             'timezone': 'UTC',
             'include_links': 'false',
             'include_app_metas': 'false',
         }
-        
+
         params.update(default_params)
 
         try:
-            
+
             req = requests.Request('GET', url, params=params, headers=headers)
             prepared = req.prepare()
 

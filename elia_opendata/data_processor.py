@@ -14,24 +14,26 @@ provides consistent output formatting.
 Example:
     Basic usage with different return types:
 
-    >>> from elia_opendata.data_processor import EliaDataProcessor
-    >>> from elia_opendata.dataset_catalog import TOTAL_LOAD
+    ```python
+    from elia_opendata.data_processor import EliaDataProcessor
+    from elia_opendata.dataset_catalog import TOTAL_LOAD
 
-    >>> # JSON output (default)
-    >>> processor = EliaDataProcessor()
-    >>> data = processor.fetch_current_value(TOTAL_LOAD)
-    >>> print(type(data))  # <class 'list'>
+    # JSON output (default)
+    processor = EliaDataProcessor()
+    data = processor.fetch_current_value(TOTAL_LOAD)
+    print(type(data))  # <class 'list'>
 
-    >>> # Pandas DataFrame output
-    >>> processor = EliaDataProcessor(return_type="pandas")
-    >>> df = processor.fetch_current_value(TOTAL_LOAD)
-    >>> print(type(df))  # <class 'pandas.core.frame.DataFrame'>
+    # Pandas DataFrame output
+    processor = EliaDataProcessor(return_type="pandas")
+    df = processor.fetch_current_value(TOTAL_LOAD)
+    print(type(df))  # <class 'pandas.core.frame.DataFrame'>
 
-    >>> # Date range query
-    >>> from datetime import datetime
-    >>> start = datetime(2023, 1, 1)
-    >>> end = datetime(2023, 1, 31)
-    >>> monthly_data = processor.fetch_data_between(TOTAL_LOAD, start, end)
+    # Date range query
+    from datetime import datetime
+    start = datetime(2023, 1, 1)
+    end = datetime(2023, 1, 31)
+    monthly_data = processor.fetch_data_between(TOTAL_LOAD, start, end)
+    ```
 """
 from typing import Optional, Any, Union, List
 from datetime import datetime
@@ -66,23 +68,29 @@ class EliaDataProcessor:
     Example:
         Basic usage:
 
-        >>> processor = EliaDataProcessor()
-        >>> current_data = processor.fetch_current_value("ods001")
+        ```python
+        processor = EliaDataProcessor()
+        current_data = processor.fetch_current_value("ods001")
+        ```
 
         With custom client and return type:
 
-        >>> from elia_opendata.client import EliaClient
-        >>> client = EliaClient(api_key="your_key")
-        >>> processor = EliaDataProcessor(client=client, return_type="pandas")
-        >>> df = processor.fetch_current_value("ods032")
-        >>> print(df.head())
+        ```python
+        from elia_opendata.client import EliaClient
+        client = EliaClient(api_key="your_key")
+        processor = EliaDataProcessor(client=client, return_type="pandas")
+        df = processor.fetch_current_value("ods032")
+        print(df.head())
+        ```
 
         Date range queries:
 
-        >>> from datetime import datetime
-        >>> start = datetime(2023, 1, 1)
-        >>> end = datetime(2023, 1, 31)
-        >>> data = processor.fetch_data_between("ods001", start, end)
+        ```python
+        from datetime import datetime
+        start = datetime(2023, 1, 1)
+        end = datetime(2023, 1, 31)
+        data = processor.fetch_data_between("ods001", start, end)
+        ```
     """
 
     def __init__(
@@ -107,17 +115,23 @@ class EliaDataProcessor:
         Example:
             Default initialization:
 
-            >>> processor = EliaDataProcessor()
+            ```python
+            processor = EliaDataProcessor()
+            ```
 
             With custom client:
 
-            >>> from elia_opendata.client import EliaClient
-            >>> client = EliaClient(api_key="your_key", timeout=60)
-            >>> processor = EliaDataProcessor(client=client)
+            ```python
+            from elia_opendata.client import EliaClient
+            client = EliaClient(api_key="your_key", timeout=60)
+            processor = EliaDataProcessor(client=client)
+            ```
 
             With pandas output:
 
-            >>> processor = EliaDataProcessor(return_type="pandas")
+            ```python
+            processor = EliaDataProcessor(return_type="pandas")
+            ```
         """
         self.client = client or EliaClient()
         if return_type not in ["json", "pandas", "polars"]:
@@ -155,23 +169,29 @@ class EliaDataProcessor:
         Example:
             Get current total load:
 
-            >>> from elia_opendata.dataset_catalog import TOTAL_LOAD
-            >>> processor = EliaDataProcessor()
-            >>> current = processor.fetch_current_value(TOTAL_LOAD)
-            >>> print(current[0]['datetime'])  # Most recent timestamp
+            ```python
+            from elia_opendata.dataset_catalog import TOTAL_LOAD
+            processor = EliaDataProcessor()
+            current = processor.fetch_current_value(TOTAL_LOAD)
+            print(current[0]['datetime'])  # Most recent timestamp
+            ```
 
             With filtering:
 
-            >>> current_measured = processor.fetch_current_value(
-            ...     TOTAL_LOAD,
-            ...     where="type='measured'"
-            ... )
+            ```python
+            current_measured = processor.fetch_current_value(
+                TOTAL_LOAD,
+                where="type='measured'"
+            )
+            ```
 
             As pandas DataFrame:
 
-            >>> processor = EliaDataProcessor(return_type="pandas")
-            >>> df = processor.fetch_current_value(TOTAL_LOAD)
-            >>> print(df.iloc[0]['value'])  # Most recent value
+            ```python
+            processor = EliaDataProcessor(return_type="pandas")
+            df = processor.fetch_current_value(TOTAL_LOAD)
+            print(df.iloc[0]['value'])  # Most recent value
+            ```
         """
         logger.info("Fetching current value for dataset %s", dataset_id)
 
@@ -229,42 +249,50 @@ class EliaDataProcessor:
         Example:
             Fetch data for January 2023:
 
-            >>> from datetime import datetime
-            >>> from elia_opendata.dataset_catalog import TOTAL_LOAD
-            >>> processor = EliaDataProcessor()
-            >>> start = datetime(2023, 1, 1)
-            >>> end = datetime(2023, 1, 31, 23, 59, 59)
-            >>> data = processor.fetch_data_between(TOTAL_LOAD, start, end)
-            >>> print(f"Retrieved {len(data)} records")
+            ```python
+            from datetime import datetime
+            from elia_opendata.dataset_catalog import TOTAL_LOAD
+            processor = EliaDataProcessor()
+            start = datetime(2023, 1, 1)
+            end = datetime(2023, 1, 31, 23, 59, 59)
+            data = processor.fetch_data_between(TOTAL_LOAD, start, end)
+            print(f"Retrieved {len(data)} records")
+            ```
 
             With string dates:
 
-            >>> data = processor.fetch_data_between(
-            ...     TOTAL_LOAD,
-            ...     "2023-01-01T00:00:00",
-            ...     "2023-01-31T23:59:59"
-            ... )
+            ```python
+            data = processor.fetch_data_between(
+                TOTAL_LOAD,
+                "2023-01-01T00:00:00",
+                "2023-01-31T23:59:59"
+            )
+            ```
 
             With additional filtering:
 
-            >>> measured_data = processor.fetch_data_between(
-            ...     TOTAL_LOAD,
-            ...     start,
-            ...     end,
-            ...     where="type='measured'",
-            ...     limit=500  # Larger batch size
-            ... )
+            ```python
+            measured_data = processor.fetch_data_between(
+                TOTAL_LOAD,
+                start,
+                end,
+                where="type='measured'",
+                limit=500  # Larger batch size
+            )
+            ```
 
             As pandas DataFrame:
 
-            >>> processor = EliaDataProcessor(return_type="pandas")
-            >>> df = processor.fetch_data_between(TOTAL_LOAD, start, end)
-            >>> print(df.describe())  # Statistical summary
+            ```python
+            processor = EliaDataProcessor(return_type="pandas")
+            df = processor.fetch_data_between(TOTAL_LOAD, start, end)
+            print(df.describe())  # Statistical summary
+            ```
         """
-        
+
         if isinstance(start_date, datetime):
             start_date = start_date.strftime(DATETIME_FORMAT)
-            
+
         if isinstance(end_date, datetime):
             end_date = end_date.strftime(DATETIME_FORMAT)
 
@@ -307,7 +335,7 @@ class EliaDataProcessor:
                 break
 
             offset += limit
-            
+
             if limit + offset > 10000:
                 break
 
