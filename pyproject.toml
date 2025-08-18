@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "elia_opendata"
-version = "1.0.0"
+version = "1.0.1"
 description = "Python Client for Elia Open Data"
 authors = [
     { name="WattsToAnalyze" }
