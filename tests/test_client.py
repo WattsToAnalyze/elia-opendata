@@ -11,7 +11,7 @@ def test_client_initialization():
     # Test with default values
     client = EliaClient()
     assert client.timeout == 30
-    
+
     # Test with custom timeout
     client = EliaClient(timeout=60)
     assert client.timeout == 60
@@ -52,7 +52,7 @@ def test_get_records():
             }
         ]
     }
-    
+
     # Mock the API endpoint
     base_url = EliaClient.BASE_URL
     endpoint = f"catalog/datasets/{IMBALANCE_PRICES_REALTIME}/records"
@@ -63,14 +63,13 @@ def test_get_records():
         json=mock_response,
         status=200
     )
-    
+
     # Test the get_records method
     client = EliaClient()
     result = client.get_records(IMBALANCE_PRICES_REALTIME, limit=2)
-    
     # Verify the response structure matches actual API
-    assert result["total_count"] == 4
-    assert len(result["results"]) == 2
-    assert result["results"][0]["datetime"] == "2025-08-17T00:00:00+00:00"
-    assert result["results"][0]["ace"] == -22.072
-    assert result["results"][1]["imbalanceprice"] == -30.258
+    assert isinstance(result, list)
+    assert len(result) == 2
+    assert result[0]["datetime"] == "2025-08-17T00:00:00+00:00"
+    assert result[0]["ace"] == -22.072
+    assert result[1]["imbalanceprice"] == -30.258
