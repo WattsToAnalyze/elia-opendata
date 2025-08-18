@@ -10,10 +10,12 @@ records with support for filtering, pagination, and various query parameters.
 Example:
     Basic usage of the Elia client:
 
-    >>> from elia_opendata.client import EliaClient
-    >>> client = EliaClient()
-    >>> data = client.get_records("ods032", limit=100)
-    >>> print(f"Retrieved {len(data)} records")
+    ```python
+    from elia_opendata.client import EliaClient
+    client = EliaClient()
+    data = client.get_records("ods032", limit=100)
+    print(f"Retrieved {len(data)} records")
+    ```
 
 """
 import logging
@@ -50,8 +52,10 @@ class EliaClient:
     Example:
         Basic usage:
 
-        >>> client = EliaClient()
-        >>> data = client.get_records("ods032", limit=100)
+        ```python
+        client = EliaClient()
+        data = client.get_records("ods032", limit=100)
+        ```
 
     """
 
@@ -113,22 +117,28 @@ class EliaClient:
         Example:
             Basic usage:
 
-            >>> client = EliaClient()
-            >>> data = client.get_records("ods032", limit=100)
+            ```python
+            client = EliaClient()
+            data = client.get_records("ods032", limit=100)
+            ```
 
             With filtering:
 
-            >>> filtered_data = client.get_records(
-            ...     "ods001",
-            ...     where="datetime>='2023-01-01' AND datetime<'2023-02-01'",
-            ...     limit=1000,
-            ...     order_by="datetime"
-            ... )
+            ```python
+            filtered_data = client.get_records(
+                "ods001",
+                where="datetime>='2023-01-01' AND datetime<'2023-02-01'",
+                limit=1000,
+                order_by="datetime"
+            )
+            ```
 
             Pagination:
 
-            >>> page1 = client.get_records("ods032", limit=50, offset=0)
-            >>> page2 = client.get_records("ods032", limit=50, offset=50)
+            ```python
+            page1 = client.get_records("ods032", limit=50, offset=0)
+            page2 = client.get_records("ods032", limit=50, offset=50)
+            ```
         """
         url = urljoin(self.BASE_URL, f"catalog/datasets/{dataset_id}/records")
 
@@ -144,22 +154,22 @@ class EliaClient:
             params["offset"] = offset
         if where is not None:
             params["where"] = where
-        
+
         default_params = {
             'timezone': 'UTC',
             'include_links': 'false',
             'include_app_metas': 'false',
         }
-        
+
         params.update(default_params)
 
         try:
-            
+
             req = requests.Request('GET', url, params=params, headers=headers)
             prepared = req.prepare()
 
             # Print the exact URL being used
-            print(f"Requesting: {prepared.url}")
+            logger.debug(f"Requesting: {prepared.url}")
 
             response = requests.get(
                 url,
@@ -174,6 +184,136 @@ class EliaClient:
 
             records = raw_data.get("results")
             return records
+
+        except requests.exceptions.HTTPError as e:
+            self._handle_http_error(e)
+        except requests.exceptions.RequestException as e:
+            raise EliaConnectionError(f"Connection failed: {str(e)}") from e
+
+    def export(
+        self,
+        dataset_id: str,
+        limit: Optional[int] = None,
+        where: Optional[str] = None,
+        export_format: str = "json",
+        **kwargs: Any
+    ) -> Any:
+        """Export dataset records in a specific format.
+
+        This method uses the Elia OpenData API export endpoint to download
+        complete dataset records in various formats (JSON, CSV, or Parquet).
+        Unlike get_records, this endpoint is optimized for bulk data export.
+
+        Args:
+            dataset_id: The unique identifier for the dataset to export.
+                Examples include "ods032" for PV production data or "ods001"
+                for total load data.
+            limit: Maximum number of records to export. If None, exports
+                all available records in the dataset.
+            where: Filter expression in OData format to limit results.
+                Examples: "datetime>'2023-01-01'" or "value>100".
+            export_format: The format for the exported data. Supported
+                formats are "json", "csv", and "parquet". Defaults to "json".
+            **kwargs: Additional parameters supported by the export endpoint.
+                Common options include:
+                - lang (str): Language for labels, defaults to 'en'
+                - timezone (str): Timezone for datetime fields, defaults to
+                  'UTC'
+                - use_labels (str): Whether to use human-readable labels,
+                  defaults to 'false'
+                - compressed (str): Whether to compress the output,
+                  defaults to 'false'
+
+        Returns:
+            The exported data in the requested format:
+            - For "json": Dict containing the parsed JSON response
+            - For "csv": str containing the CSV data
+            - For "parquet": bytes containing the Parquet file content
+
+        Raises:
+            ValueError: If an unsupported export format is specified.
+            APIError: If the API request fails due to server error, invalid
+                dataset ID, or malformed query parameters.
+            AuthError: If authentication is required but invalid/missing
+                API key is provided.
+            RateLimitError: If API rate limits are exceeded.
+            EliaConnectionError: If network connection fails or times out.
+
+        Example:
+            Basic JSON export:
+
+            ```python
+            client = EliaClient()
+            data = client.export("ods032", limit=1000)
+            ```
+
+            CSV export with filtering:
+
+            ```python
+            csv_data = client.export(
+                "ods001",
+                where="datetime>='2023-01-01'",
+                export_format="csv",
+                use_labels="true"
+            )
+            ```
+
+            Parquet export:
+
+            ```python
+            parquet_data = client.export(
+                "ods032",
+                export_format="parquet",
+                compressed="true"
+            )
+            ```
+        """
+
+        # Build the export URL based on format
+        if export_format == "json":
+            url = urljoin(
+                self.BASE_URL, f"catalog/datasets/{dataset_id}/exports/json"
+            )
+        elif export_format == "csv":
+            url = urljoin(
+                self.BASE_URL, f"catalog/datasets/{dataset_id}/exports/csv"
+            )
+        elif export_format == "parquet":
+            url = urljoin(
+                self.BASE_URL, f"catalog/datasets/{dataset_id}/exports/parquet"
+            )
+        else:
+            raise ValueError(
+                f"Unsupported export format: {export_format}. "
+                "Supported formats are 'json', 'csv', and 'parquet'."
+            )
+
+        # Build parameters, filtering out None values
+        params: Dict[str, Any] = {}
+        if where is not None:
+            params['where'] = where
+        if limit is not None:
+            params['limit'] = limit
+
+        # Add optional parameters with defaults
+        params.update({
+            'lang': kwargs.get('lang', 'en'),
+            'timezone': kwargs.get('timezone', 'UTC'),
+            'use_labels': kwargs.get('use_labels', 'false'),
+            'compressed': kwargs.get('compressed', 'false'),
+            'epsg': kwargs.get('epsg', 4326)
+        })
+
+        try:
+            response = requests.get(url, params=params, timeout=self.timeout)
+            response.raise_for_status()
+
+            if export_format == "json":
+                return response.json()
+            elif export_format == "csv":
+                return response.text
+            else:  # parquet
+                return response.content
 
         except requests.exceptions.HTTPError as e:
             self._handle_http_error(e)

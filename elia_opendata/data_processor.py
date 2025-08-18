@@ -14,34 +14,37 @@ provides consistent output formatting.
 Example:
     Basic usage with different return types:
 
-    >>> from elia_opendata.data_processor import EliaDataProcessor
-    >>> from elia_opendata.dataset_catalog import TOTAL_LOAD
+    ```python
+    from elia_opendata.data_processor import EliaDataProcessor
+    from elia_opendata.dataset_catalog import TOTAL_LOAD
 
-    >>> # JSON output (default)
-    >>> processor = EliaDataProcessor()
-    >>> data = processor.fetch_current_value(TOTAL_LOAD)
-    >>> print(type(data))  # <class 'list'>
+    # JSON output (default)
+    processor = EliaDataProcessor()
+    data = processor.fetch_current_value(TOTAL_LOAD)
+    print(type(data))  # <class 'list'>
 
-    >>> # Pandas DataFrame output
-    >>> processor = EliaDataProcessor(return_type="pandas")
-    >>> df = processor.fetch_current_value(TOTAL_LOAD)
-    >>> print(type(df))  # <class 'pandas.core.frame.DataFrame'>
+    # Pandas DataFrame output
+    processor = EliaDataProcessor(return_type="pandas")
+    df = processor.fetch_current_value(TOTAL_LOAD)
+    print(type(df))  # <class 'pandas.core.frame.DataFrame'>
 
-    >>> # Date range query
-    >>> from datetime import datetime
-    >>> start = datetime(2023, 1, 1)
-    >>> end = datetime(2023, 1, 31)
-    >>> monthly_data = processor.fetch_data_between(TOTAL_LOAD, start, end)
+    # Date range query
+    from datetime import datetime
+    start = datetime(2023, 1, 1)
+    end = datetime(2023, 1, 31)
+    monthly_data = processor.fetch_data_between(TOTAL_LOAD, start, end)
+    ```
 """
 from typing import Optional, Any, Union, List
 from datetime import datetime
 import logging
+import io
 import pandas as pd
 import polars as pl
 
 from .client import EliaClient
 
-DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+DATE_FORMAT = "%Y-%m-%d"
 
 logger = logging.getLogger(__name__)
 
@@ -66,23 +69,29 @@ class EliaDataProcessor:
     Example:
         Basic usage:
 
-        >>> processor = EliaDataProcessor()
-        >>> current_data = processor.fetch_current_value("ods001")
+        ```python
+        processor = EliaDataProcessor()
+        current_data = processor.fetch_current_value("ods001")
+        ```
 
         With custom client and return type:
 
-        >>> from elia_opendata.client import EliaClient
-        >>> client = EliaClient(api_key="your_key")
-        >>> processor = EliaDataProcessor(client=client, return_type="pandas")
-        >>> df = processor.fetch_current_value("ods032")
-        >>> print(df.head())
+        ```python
+        from elia_opendata.client import EliaClient
+        client = EliaClient(api_key="your_key")
+        processor = EliaDataProcessor(client=client, return_type="pandas")
+        df = processor.fetch_current_value("ods032")
+        print(df.head())
+        ```
 
         Date range queries:
 
-        >>> from datetime import datetime
-        >>> start = datetime(2023, 1, 1)
-        >>> end = datetime(2023, 1, 31)
-        >>> data = processor.fetch_data_between("ods001", start, end)
+        ```python
+        from datetime import datetime
+        start = datetime(2023, 1, 1)
+        end = datetime(2023, 1, 31)
+        data = processor.fetch_data_between("ods001", start, end)
+        ```
     """
 
     def __init__(
@@ -107,17 +116,23 @@ class EliaDataProcessor:
         Example:
             Default initialization:
 
-            >>> processor = EliaDataProcessor()
+            ```python
+            processor = EliaDataProcessor()
+            ```
 
             With custom client:
 
-            >>> from elia_opendata.client import EliaClient
-            >>> client = EliaClient(api_key="your_key", timeout=60)
-            >>> processor = EliaDataProcessor(client=client)
+            ```python
+            from elia_opendata.client import EliaClient
+            client = EliaClient(api_key="your_key", timeout=60)
+            processor = EliaDataProcessor(client=client)
+            ```
 
             With pandas output:
 
-            >>> processor = EliaDataProcessor(return_type="pandas")
+            ```python
+            processor = EliaDataProcessor(return_type="pandas")
+            ```
         """
         self.client = client or EliaClient()
         if return_type not in ["json", "pandas", "polars"]:
@@ -155,25 +170,31 @@ class EliaDataProcessor:
         Example:
             Get current total load:
 
-            >>> from elia_opendata.dataset_catalog import TOTAL_LOAD
-            >>> processor = EliaDataProcessor()
-            >>> current = processor.fetch_current_value(TOTAL_LOAD)
-            >>> print(current[0]['datetime'])  # Most recent timestamp
+            ```python
+            from elia_opendata.dataset_catalog import TOTAL_LOAD
+            processor = EliaDataProcessor()
+            current = processor.fetch_current_value(TOTAL_LOAD)
+            print(current[0]['datetime'])  # Most recent timestamp
+            ```
 
             With filtering:
 
-            >>> current_measured = processor.fetch_current_value(
-            ...     TOTAL_LOAD,
-            ...     where="type='measured'"
-            ... )
+            ```python
+            current_measured = processor.fetch_current_value(
+                TOTAL_LOAD,
+                where="type='measured'"
+            )
+            ```
 
             As pandas DataFrame:
 
-            >>> processor = EliaDataProcessor(return_type="pandas")
-            >>> df = processor.fetch_current_value(TOTAL_LOAD)
-            >>> print(df.iloc[0]['value'])  # Most recent value
+            ```python
+            processor = EliaDataProcessor(return_type="pandas")
+            df = processor.fetch_current_value(TOTAL_LOAD)
+            print(df.iloc[0]['value'])  # Most recent value
+            ```
         """
-        logger.info("Fetching current value for dataset %s", dataset_id)
+        logger.debug("Fetching current value for dataset %s", dataset_id)
 
         # Get the most recent record by limiting to 1 and ordering by
         # datetime desc
@@ -195,22 +216,27 @@ class EliaDataProcessor:
         """Fetch data between two dates with automatic pagination.
 
         This method retrieves all records from the specified dataset within
-        the given date range. It automatically handles pagination to fetch
-        large datasets completely, combining multiple API requests as needed.
+        the given date range. It supports two modes:
+        1. Pagination mode (default): Uses multiple API requests with
+           pagination
+        2. Export mode: Uses the bulk export endpoint for large datasets
 
         Args:
             dataset_id: Unique identifier for the dataset to query. Use
                 constants from dataset_catalog module.
             start_date: Start date for the query range. Can be either:
                 - datetime object
-                - ISO format string (e.g., "2023-01-01T00:00:00")
+                - ISO date string (e.g., "2023-01-01")
             end_date: End date for the query range. Can be either:
                 - datetime object
-                - ISO format string (e.g., "2023-01-31T23:59:59")
+                - ISO date string (e.g., "2023-01-31")
             **kwargs: Additional query parameters:
+                - export_data (bool): If True, uses the export endpoint for
+                  bulk data retrieval. If False (default), uses pagination.
                 - where: Additional filter conditions (combined with date
                   filter)
-                - limit: Batch size for pagination (default: 100)
+                - limit: Batch size for pagination (default: 100) or maximum
+                  records for export
                 - order_by: Sort order for results
                 - select: Comma-separated fields to retrieve
                 - Any other API-supported parameters
@@ -222,53 +248,74 @@ class EliaDataProcessor:
             - If return_type="polars": polars.DataFrame
 
         Note:
-            The method automatically paginates through all results. For very
-            large date ranges, consider using smaller batch sizes by setting
-            the 'limit' parameter in kwargs.
+            For large date ranges (>10,000 records), consider setting
+            export_data=True to use the more efficient export endpoint.
+            The export endpoint automatically uses the optimal format:
+            - JSON for json return_type
+            - Parquet for pandas/polars return_types
 
         Example:
             Fetch data for January 2023:
 
-            >>> from datetime import datetime
-            >>> from elia_opendata.dataset_catalog import TOTAL_LOAD
-            >>> processor = EliaDataProcessor()
-            >>> start = datetime(2023, 1, 1)
-            >>> end = datetime(2023, 1, 31, 23, 59, 59)
-            >>> data = processor.fetch_data_between(TOTAL_LOAD, start, end)
-            >>> print(f"Retrieved {len(data)} records")
+            ```python
+            from datetime import datetime
+            from elia_opendata.dataset_catalog import TOTAL_LOAD
+            processor = EliaDataProcessor()
+            start = datetime(2023, 1, 1)
+            end = datetime(2023, 1, 31)
+            data = processor.fetch_data_between(TOTAL_LOAD, start, end)
+            print(f"Retrieved {len(data)} records")
+            ```
+
+            Using export endpoint for large datasets:
+
+            ```python
+            data = processor.fetch_data_between(
+                TOTAL_LOAD,
+                start,
+                end,
+                export_data=True
+            )
+            ```
 
             With string dates:
 
-            >>> data = processor.fetch_data_between(
-            ...     TOTAL_LOAD,
-            ...     "2023-01-01T00:00:00",
-            ...     "2023-01-31T23:59:59"
-            ... )
+            ```python
+            data = processor.fetch_data_between(
+                TOTAL_LOAD,
+                "2023-01-01",
+                "2023-01-31"
+            )
+            ```
 
             With additional filtering:
 
-            >>> measured_data = processor.fetch_data_between(
-            ...     TOTAL_LOAD,
-            ...     start,
-            ...     end,
-            ...     where="type='measured'",
-            ...     limit=500  # Larger batch size
-            ... )
+            ```python
+            measured_data = processor.fetch_data_between(
+                TOTAL_LOAD,
+                start,
+                end,
+                where="type='measured'",
+                limit=500  # Larger batch size
+            )
+            ```
 
             As pandas DataFrame:
 
-            >>> processor = EliaDataProcessor(return_type="pandas")
-            >>> df = processor.fetch_data_between(TOTAL_LOAD, start, end)
-            >>> print(df.describe())  # Statistical summary
+            ```python
+            processor = EliaDataProcessor(return_type="pandas")
+            df = processor.fetch_data_between(TOTAL_LOAD, start, end)
+            print(df.describe())  # Statistical summary
+            ```
         """
-        
-        if isinstance(start_date, datetime):
-            start_date = start_date.strftime(DATETIME_FORMAT)
-            
-        if isinstance(end_date, datetime):
-            end_date = end_date.strftime(DATETIME_FORMAT)
 
-        logger.info(
+        if isinstance(start_date, datetime):
+            start_date = start_date.strftime(DATE_FORMAT)
+
+        if isinstance(end_date, datetime):
+            end_date = end_date.strftime(DATE_FORMAT)
+
+        logger.debug(
             "Fetching data for dataset %s between %s and %s",
             dataset_id, start_date, end_date
         )
@@ -282,6 +329,28 @@ class EliaDataProcessor:
         else:
             kwargs["where"] = where_condition
 
+        # Check if export endpoint should be used
+        export_data = kwargs.pop("export_data", False)
+
+        if export_data:
+            return self._fetch_via_export(dataset_id, **kwargs)
+        else:
+            return self._fetch_via_pagination(dataset_id, **kwargs)
+
+    def _fetch_via_pagination(
+        self,
+        dataset_id: str,
+        **kwargs
+    ) -> Any:
+        """Fetch data using pagination through the records endpoint.
+
+        Args:
+            dataset_id: Unique identifier for the dataset to query.
+            **kwargs: Additional query parameters including where conditions.
+
+        Returns:
+            Formatted data according to return_type.
+        """
         # Fetch all records with pagination
         all_records = []
         offset = 0
@@ -307,11 +376,71 @@ class EliaDataProcessor:
                 break
 
             offset += limit
-            
+
             if limit + offset > 10000:
+                logger.warning(
+                    "Reached maximum pagination limit. "
+                    "If you expect more data, consider setting the "
+                    "export_data flag to True."
+                )
                 break
 
         return self._format_output(all_records)
+
+    def _fetch_via_export(
+        self,
+        dataset_id: str,
+        **kwargs
+    ) -> Any:
+        """Fetch data using the export endpoint.
+
+        Args:
+            dataset_id: Unique identifier for the dataset to query.
+            **kwargs: Additional query parameters including where conditions.
+
+        Returns:
+            Formatted data according to return_type.
+        """
+        # Determine export format based on return type
+        if self.return_type in ["pandas", "polars"]:
+            export_format = "parquet"
+        else:
+            export_format = "json"
+
+        logger.debug(
+            "Using export endpoint for dataset %s with format %s",
+            dataset_id, export_format
+        )
+
+        # Export the data
+        exported_data = self.client.export(
+            dataset_id,
+            export_format=export_format,
+            **kwargs
+        )
+
+        # Process the exported data based on format
+        if export_format == "json":
+            # For JSON export, the response structure might be different
+            # Extract the records if they're nested
+            if isinstance(exported_data, dict) and 'results' in exported_data:
+                records = exported_data['results']
+            elif isinstance(exported_data, list):
+                records = exported_data
+            else:
+                records = [exported_data]
+
+            return self._format_output(records)
+
+        if export_format == "parquet":
+            # For parquet, we need to read the bytes and convert            
+            if self.return_type == "pandas":
+                return pd.read_parquet(io.BytesIO(exported_data))
+
+            if self.return_type == "polars":
+                return pl.read_parquet(io.BytesIO(exported_data))
+
+        return exported_data
 
     def _format_output(self, records: List[dict]) -> Any:
         """Format the output according to the specified return type.

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "elia_opendata"
-version = "1.0.0"
+version = "1.0.1"
 description = "Python Client for Elia Open Data"
 authors = [
     { name="WattsToAnalyze" }
@@ -38,5 +38,9 @@ docs = [
     "mkdocs-material>=9.0.0",
     "mkdocstrings>=0.24.0",
     "mkdocstrings-python>=1.7.0",
-    "mkdocs-autorefs>=0.5.0"
+    "mkdocs-autorefs>=0.5.0",
+    "jupyter>=1.0.0",
+    "nbformat>=5.0.0",
+    "ipykernel>=6.0.0",
+    "matplotlib>=3.5.0"
 ]
