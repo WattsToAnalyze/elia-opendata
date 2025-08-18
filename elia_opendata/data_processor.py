@@ -38,6 +38,7 @@ Example:
 from typing import Optional, Any, Union, List
 from datetime import datetime
 import logging
+import io
 import pandas as pd
 import polars as pl
 
@@ -215,8 +216,10 @@ class EliaDataProcessor:
         """Fetch data between two dates with automatic pagination.
 
         This method retrieves all records from the specified dataset within
-        the given date range. It automatically handles pagination to fetch
-        large datasets completely, combining multiple API requests as needed.
+        the given date range. It supports two modes:
+        1. Pagination mode (default): Uses multiple API requests with
+           pagination
+        2. Export mode: Uses the bulk export endpoint for large datasets
 
         Args:
             dataset_id: Unique identifier for the dataset to query. Use
@@ -228,9 +231,12 @@ class EliaDataProcessor:
                 - datetime object
                 - ISO format string (e.g., "2023-01-31T23:59:59")
             **kwargs: Additional query parameters:
+                - export_data (bool): If True, uses the export endpoint for
+                  bulk data retrieval. If False (default), uses pagination.
                 - where: Additional filter conditions (combined with date
                   filter)
-                - limit: Batch size for pagination (default: 100)
+                - limit: Batch size for pagination (default: 100) or maximum
+                  records for export
                 - order_by: Sort order for results
                 - select: Comma-separated fields to retrieve
                 - Any other API-supported parameters
@@ -242,9 +248,11 @@ class EliaDataProcessor:
             - If return_type="polars": polars.DataFrame
 
         Note:
-            The method automatically paginates through all results. For very
-            large date ranges, consider using smaller batch sizes by setting
-            the 'limit' parameter in kwargs.
+            For large date ranges (>10,000 records), consider setting
+            export_data=True to use the more efficient export endpoint.
+            The export endpoint automatically uses the optimal format:
+            - JSON for json return_type
+            - Parquet for pandas/polars return_types
 
         Example:
             Fetch data for January 2023:
@@ -257,6 +265,17 @@ class EliaDataProcessor:
             end = datetime(2023, 1, 31, 23, 59, 59)
             data = processor.fetch_data_between(TOTAL_LOAD, start, end)
             print(f"Retrieved {len(data)} records")
+            ```
+
+            Using export endpoint for large datasets:
+
+            ```python
+            data = processor.fetch_data_between(
+                TOTAL_LOAD,
+                start,
+                end,
+                export_data=True
+            )
             ```
 
             With string dates:
@@ -310,6 +329,28 @@ class EliaDataProcessor:
         else:
             kwargs["where"] = where_condition
 
+        # Check if export endpoint should be used
+        export_data = kwargs.pop("export_data", False)
+
+        if export_data:
+            return self._fetch_via_export(dataset_id, **kwargs)
+        else:
+            return self._fetch_via_pagination(dataset_id, **kwargs)
+
+    def _fetch_via_pagination(
+        self,
+        dataset_id: str,
+        **kwargs
+    ) -> Any:
+        """Fetch data using pagination through the records endpoint.
+
+        Args:
+            dataset_id: Unique identifier for the dataset to query.
+            **kwargs: Additional query parameters including where conditions.
+
+        Returns:
+            Formatted data according to return_type.
+        """
         # Fetch all records with pagination
         all_records = []
         offset = 0
@@ -337,9 +378,69 @@ class EliaDataProcessor:
             offset += limit
 
             if limit + offset > 10000:
+                logger.warning(
+                    "Reached maximum pagination limit. "
+                    "If you expect more data, consider setting the "
+                    "export_data flag to True."
+                )
                 break
 
         return self._format_output(all_records)
+
+    def _fetch_via_export(
+        self,
+        dataset_id: str,
+        **kwargs
+    ) -> Any:
+        """Fetch data using the export endpoint.
+
+        Args:
+            dataset_id: Unique identifier for the dataset to query.
+            **kwargs: Additional query parameters including where conditions.
+
+        Returns:
+            Formatted data according to return_type.
+        """
+        # Determine export format based on return type
+        if self.return_type in ["pandas", "polars"]:
+            export_format = "parquet"
+        else:
+            export_format = "json"
+
+        logger.info(
+            "Using export endpoint for dataset %s with format %s",
+            dataset_id, export_format
+        )
+
+        # Export the data
+        exported_data = self.client.export(
+            dataset_id,
+            export_format=export_format,
+            **kwargs
+        )
+
+        # Process the exported data based on format
+        if export_format == "json":
+            # For JSON export, the response structure might be different
+            # Extract the records if they're nested
+            if isinstance(exported_data, dict) and 'results' in exported_data:
+                records = exported_data['results']
+            elif isinstance(exported_data, list):
+                records = exported_data
+            else:
+                records = [exported_data]
+            return self._format_output(records)
+
+        elif export_format == "parquet":
+            # For parquet, we need to read the bytes and convert            
+            if self.return_type == "pandas":
+                df = pd.read_parquet(io.BytesIO(exported_data))
+                return df
+            elif self.return_type == "polars":
+                df = pl.read_parquet(io.BytesIO(exported_data))
+                return df
+
+        return exported_data
 
     def _format_output(self, records: List[dict]) -> Any:
         """Format the output according to the specified return type.
