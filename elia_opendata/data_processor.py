@@ -429,16 +429,16 @@ class EliaDataProcessor:
                 records = exported_data
             else:
                 records = [exported_data]
+
             return self._format_output(records)
 
-        elif export_format == "parquet":
+        if export_format == "parquet":
             # For parquet, we need to read the bytes and convert            
             if self.return_type == "pandas":
-                df = pd.read_parquet(io.BytesIO(exported_data))
-                return df
-            elif self.return_type == "polars":
-                df = pl.read_parquet(io.BytesIO(exported_data))
-                return df
+                return pd.read_parquet(io.BytesIO(exported_data))
+
+            if self.return_type == "polars":
+                return pl.read_parquet(io.BytesIO(exported_data))
 
         return exported_data
 
