@@ -3,7 +3,7 @@ Performance tests for the Elia OpenData API client.
 """
 import time
 from datetime import datetime, timedelta
-from elia_opendata.data_processor import EliaDataProcessor
+from elia_opendata.data_processor import EliaDataFetcher
 from elia_opendata.dataset_catalog import IMBALANCE_PRICES_QH
 
 
@@ -11,7 +11,7 @@ def test_single_batch_performance():
     """Test performance of fetching a single batch of 100 records."""
     print("\n=== Single Batch Performance Test ===")
     
-    processor = EliaDataProcessor(return_type="json")
+    processor = EliaDataFetcher(return_type="json")
     
     # Record start time
     start_time = time.time()
@@ -59,7 +59,7 @@ def test_pagination_performance():
     """Test performance of pagination from 2025-01-01 to 2025-01-07."""
     print("\n=== Pagination Performance Test ===")
     
-    processor = EliaDataProcessor(return_type="json")
+    processor = EliaDataFetcher(return_type="json")
     
     # Date range: one week in January 2025
     # start_date = datetime(2025, 1, 1)

@@ -9,11 +9,11 @@ This section provides practical examples of using the Elia OpenData package for 
 Fetch the most recent data from any dataset:
 
 ```python
-from elia_opendata import EliaDataProcessor
+from elia_opendata import EliaDataFetcher
 from elia_opendata.dataset_catalog import TOTAL_LOAD, PV_PRODUCTION, WIND_PRODUCTION
 
 # Create processor with pandas output for analysis
-processor = EliaDataProcessor(return_type="pandas")
+processor = EliaDataFetcher(return_type="pandas")
 
 # Get current total load
 current_load = processor.fetch_current_value(TOTAL_LOAD)
@@ -71,7 +71,7 @@ Analyze solar production with forecasts:
 from elia_opendata.dataset_catalog import PV_PRODUCTION
 
 # Get solar data for analysis
-processor = EliaDataProcessor(return_type="pandas")
+processor = EliaDataFetcher(return_type="pandas")
 solar_data = processor.fetch_data_between(
     PV_PRODUCTION,
     datetime(2023, 7, 1),
@@ -205,7 +205,7 @@ Simple dashboard-style analysis:
 def energy_dashboard(date_start, date_end):
     """Create a simple energy dashboard for a date range."""
     
-    processor = EliaDataProcessor(return_type="pandas")
+    processor = EliaDataFetcher(return_type="pandas")
     
     # Fetch all major datasets
     load_data = processor.fetch_data_between(TOTAL_LOAD, date_start, date_end)

@@ -40,12 +40,12 @@ print(f"Retrieved {len(recent_data)} records")
 ### Advanced Usage with Data Processor
 
 ```python
-from elia_opendata import EliaDataProcessor
+from elia_opendata import EliaDataFetcher
 from elia_opendata.dataset_catalog import TOTAL_LOAD, PV_PRODUCTION
 from datetime import datetime
 
 # Create processor with pandas output
-processor = EliaDataProcessor(return_type="pandas")
+processor = EliaDataFetcher(return_type="pandas")
 
 # Get current values
 current_load = processor.fetch_current_value(TOTAL_LOAD)
