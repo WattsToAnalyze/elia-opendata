@@ -102,7 +102,7 @@ def test_pagination_performance():
     if result:
         first_record = result[0]
         last_record = result[-1]
-    
+
         assert "datetime" in first_record, (
             "First record should have datetime field"
         )
