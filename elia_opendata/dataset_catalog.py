@@ -28,9 +28,9 @@ Example:
     from elia_opendata.dataset_catalog import *
     from elia_opendata.data_fetcher import EliaDataFetcher
 
-    processor = EliaDataFetcher(return_type="pandas")
-    wind_df = processor.fetch_current_value(WIND_POWER_PRODUCTION_FORECAST_HISTORICAL)
-    pv_df = processor.fetch_current_value(PV_POWER_PRODUCTION_FORECAST_HISTORICAL)
+    data_fetcher = EliaDataFetcher(return_type="pandas")
+    wind_df = data_fetcher.fetch_current_value(WIND_POWER_PRODUCTION_FORECAST_HISTORICAL)
+    pv_df = data_fetcher.fetch_current_value(PV_POWER_PRODUCTION_FORECAST_HISTORICAL)
     ```
 
     Use with date range queries:
@@ -41,7 +41,7 @@ Example:
 
     start = datetime(2023, 1, 1)
     end = datetime(2023, 1, 31)
-    data = processor.fetch_data_between(CURRENT_SYSTEM_IMBALANCE_HIST, start, end)
+    data = data_fetcher.fetch_data_between(CURRENT_SYSTEM_IMBALANCE_HIST, start, end)
     ```
 
 Note:

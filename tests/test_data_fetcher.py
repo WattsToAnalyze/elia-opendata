@@ -8,21 +8,21 @@ from elia_opendata.client import EliaClient
 
 
 def test_data_fetcher_initialization():
-    """Test data processor initialization."""
+    """Test data fetcher initialization."""
     # Test with default values
-    processor = EliaDataFetcher()
-    assert isinstance(processor.client, EliaClient)
-    assert processor.return_type == "json"
+    data_fetcher = EliaDataFetcher()
+    assert isinstance(data_fetcher.client, EliaClient)
+    assert data_fetcher.return_type == "json"
 
     # Test with custom return type
-    processor = EliaDataFetcher(return_type="pandas")
-    assert processor.return_type == "pandas"
+    data_fetcher = EliaDataFetcher(return_type="pandas")
+    assert data_fetcher.return_type == "pandas"
 
     # Test with custom client
     custom_client = EliaClient(timeout=60)
-    processor = EliaDataFetcher(client=custom_client, return_type="polars")
-    assert processor.client == custom_client
-    assert processor.return_type == "polars"
+    data_fetcher = EliaDataFetcher(client=custom_client, return_type="polars")
+    assert data_fetcher.client == custom_client
+    assert data_fetcher.return_type == "polars"
 
 
 def test_date_format_constant():
@@ -45,13 +45,13 @@ def test_date_formatting_conversion():
 
 def test_export_data_parameter_default():
     """Test that export_data parameter defaults to False."""
-    processor = EliaDataFetcher()
+    data_fetcher = EliaDataFetcher()
 
-    # Test that we can create the processor and that the parameter
+    # Test that we can create the data_fetcher and that the parameter
     # would default to False (pagination mode)
-    assert processor.return_type == "json"
-    assert hasattr(processor, '_fetch_via_pagination')
-    assert hasattr(processor, '_fetch_via_export')
+    assert data_fetcher.return_type == "json"
+    assert hasattr(data_fetcher, '_fetch_via_pagination')
+    assert hasattr(data_fetcher, '_fetch_via_export')
 
 
 def test_date_filter_construction():
@@ -77,13 +77,13 @@ def test_invalid_return_type():
 
 def test_format_output_json():
     """Test _format_output method with JSON return type."""
-    processor = EliaDataFetcher(return_type="json")
+    data_fetcher = EliaDataFetcher(return_type="json")
     test_records = [
         {"datetime": "2024-01-01", "value": 100.0},
         {"datetime": "2024-01-02", "value": 200.0}
     ]
 
-    result = processor._format_output(test_records)
+    result = data_fetcher._format_output(test_records)
     assert result == test_records
     assert isinstance(result, list)
 
@@ -92,13 +92,13 @@ def test_format_output_pandas():
     """Test _format_output method with pandas return type."""
     try:
         
-        processor = EliaDataFetcher(return_type="pandas")
+        data_fetcher = EliaDataFetcher(return_type="pandas")
         test_records = [
             {"datetime": "2024-01-01", "value": 100.0},
             {"datetime": "2024-01-02", "value": 200.0}
         ]
 
-        result = processor._format_output(test_records)
+        result = data_fetcher._format_output(test_records)
         assert isinstance(result, pd.DataFrame)
         assert len(result) == 2
         assert list(result.columns) == ["datetime", "value"]
@@ -115,13 +115,13 @@ def test_format_output_polars():
     try:
         import polars as pl
 
-        processor = EliaDataFetcher(return_type="polars")
+        data_fetcher = EliaDataFetcher(return_type="polars")
         test_records = [
             {"datetime": "2024-01-01", "value": 100.0},
             {"datetime": "2024-01-02", "value": 200.0}
         ]
 
-        result = processor._format_output(test_records)
+        result = data_fetcher._format_output(test_records)
         assert isinstance(result, pl.DataFrame)
         assert len(result) == 2
         assert list(result.columns) == ["datetime", "value"]
@@ -135,14 +135,14 @@ def test_format_output_polars():
 
 def test_format_output_empty_records():
     """Test _format_output method with empty records."""
-    processor = EliaDataFetcher(return_type="json")
-    result = processor._format_output([])
+    data_fetcher = EliaDataFetcher(return_type="json")
+    result = data_fetcher._format_output([])
     assert result == []
 
     try:
         import pandas as pd
-        processor = EliaDataFetcher(return_type="pandas")
-        result = processor._format_output([])
+        data_fetcher = EliaDataFetcher(return_type="pandas")
+        result = data_fetcher._format_output([])
         assert isinstance(result, pd.DataFrame)
         assert len(result) == 0
     except ImportError:
@@ -150,8 +150,8 @@ def test_format_output_empty_records():
 
     try:
         import polars as pl
-        processor = EliaDataFetcher(return_type="polars")
-        result = processor._format_output([])
+        data_fetcher = EliaDataFetcher(return_type="polars")
+        result = data_fetcher._format_output([])
         assert isinstance(result, pl.DataFrame)
         assert len(result) == 0
     except ImportError:
@@ -160,11 +160,11 @@ def test_format_output_empty_records():
 
 def test_format_output_unsupported_type():
     """Test that unsupported return types raise ValueError."""
-    processor = EliaDataFetcher()
-    processor.return_type = "unsupported"  # Manually set invalid type
+    data_fetcher = EliaDataFetcher()
+    data_fetcher.return_type = "unsupported"  # Manually set invalid type
 
     try:
-        processor._format_output([{"test": "data"}])
+        data_fetcher._format_output([{"test": "data"}])
         assert False, "Should have raised ValueError"
     except ValueError as e:
         assert "Unsupported return type" in str(e)

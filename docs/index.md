@@ -37,24 +37,24 @@ recent_data = client.get_records(TOTAL_LOAD, limit=10)
 print(f"Retrieved {len(recent_data)} records")
 ```
 
-### Advanced Usage with Data Processor
+### Advanced Usage with Data Fetcher
 
 ```python
 from elia_opendata import EliaDataFetcher
 from elia_opendata.dataset_catalog import TOTAL_LOAD, PV_PRODUCTION
 from datetime import datetime
 
-# Create processor with pandas output
-processor = EliaDataFetcher(return_type="pandas")
+# Create data fetcher with pandas output
+data_fetcher = EliaDataFetcher(return_type="pandas")
 
 # Get current values
-current_load = processor.fetch_current_value(TOTAL_LOAD)
-current_pv = processor.fetch_current_value(PV_PRODUCTION)
+current_load = data_fetcher.fetch_current_value(TOTAL_LOAD)
+current_pv = data_fetcher.fetch_current_value(PV_PRODUCTION)
 
 # Get data for a specific date range
 start_date = datetime(2023, 1, 1)
 end_date = datetime(2023, 1, 31)
-january_data = processor.fetch_data_between(TOTAL_LOAD, start_date, end_date)
+january_data = data_fetcher.fetch_data_between(TOTAL_LOAD, start_date, end_date)
 ```
 
 ## Available Data

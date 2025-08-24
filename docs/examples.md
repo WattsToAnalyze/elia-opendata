@@ -12,16 +12,16 @@ Fetch the most recent data from any dataset:
 from elia_opendata import EliaDataFetcher
 from elia_opendata.dataset_catalog import TOTAL_LOAD, PV_PRODUCTION, WIND_PRODUCTION
 
-# Create processor with pandas output for analysis
-processor = EliaDataFetcher(return_type="pandas")
+# Create data fetcher with pandas output for analysis
+data_fetcher = EliaDataFetcher(return_type="pandas")
 
 # Get current total load
-current_load = processor.fetch_current_value(TOTAL_LOAD)
+current_load = data_fetcher.fetch_current_value(TOTAL_LOAD)
 print(f"Current total load: {current_load.iloc[0]['totalload']:.2f} MW")
 
 # Get current renewable production
-current_pv = processor.fetch_current_value(PV_PRODUCTION)
-current_wind = processor.fetch_current_value(WIND_PRODUCTION)
+current_pv = data_fetcher.fetch_current_value(PV_PRODUCTION)
+current_wind = data_fetcher.fetch_current_value(WIND_PRODUCTION)
 print(f"Current PV production: {current_pv.iloc[0]['measured']:.2f} MW")
 print(f"Current wind production: {current_wind.iloc[0]['measured']:.2f} MW")
 ```
@@ -39,7 +39,7 @@ import pandas as pd
 start = datetime(2023, 6, 1)
 end = datetime(2023, 6, 30)
 
-june_load = processor.fetch_data_between(TOTAL_LOAD, start, end, export_data=True)
+june_load = data_fetcher.fetch_data_between(TOTAL_LOAD, start, end, export_data=True)
 
 # Convert datetime column and set as index
 june_load['datetime'] = pd.to_datetime(june_load['datetime'])
@@ -71,8 +71,8 @@ Analyze solar production with forecasts:
 from elia_opendata.dataset_catalog import PV_PRODUCTION
 
 # Get solar data for analysis
-processor = EliaDataFetcher(return_type="pandas")
-solar_data = processor.fetch_data_between(
+data_fetcher = EliaDataFetcher(return_type="pandas")
+solar_data = data_fetcher.fetch_data_between(
     PV_PRODUCTION,
     datetime(2023, 7, 1),
     datetime(2023, 7, 7)  # One week of data
@@ -119,9 +119,9 @@ from elia_opendata.dataset_catalog import TOTAL_LOAD, WIND_PRODUCTION, PV_PRODUC
 start = datetime(2023, 8, 1)
 end = datetime(2023, 8, 7)
 
-total_load = processor.fetch_data_between(TOTAL_LOAD, start, end)
-wind_prod = processor.fetch_data_between(WIND_PRODUCTION, start, end)
-solar_prod = processor.fetch_data_between(PV_PRODUCTION, start, end)
+total_load = data_fetcher.fetch_data_between(TOTAL_LOAD, start, end)
+wind_prod = data_fetcher.fetch_data_between(WIND_PRODUCTION, start, end)
+solar_prod = data_fetcher.fetch_data_between(PV_PRODUCTION, start, end)
 
 print("Data structure check:")
 print(f"Total load columns: {total_load.columns.tolist()}")
@@ -172,7 +172,7 @@ Analyze electricity market imbalance prices:
 from elia_opendata.dataset_catalog import IMBALANCE_PRICES_QH
 
 # Get imbalance price data
-imbalance_data = processor.fetch_data_between(
+imbalance_data = data_fetcher.fetch_data_between(
     IMBALANCE_PRICES_QH,
     datetime(2025, 1, 1),
     datetime(2025, 2, 1), 
@@ -205,12 +205,12 @@ Simple dashboard-style analysis:
 def energy_dashboard(date_start, date_end):
     """Create a simple energy dashboard for a date range."""
     
-    processor = EliaDataFetcher(return_type="pandas")
+    data_fetcher = EliaDataFetcher(return_type="pandas")
     
     # Fetch all major datasets
-    load_data = processor.fetch_data_between(TOTAL_LOAD, date_start, date_end)
-    wind_data = processor.fetch_data_between(WIND_PRODUCTION, date_start, date_end)
-    solar_data = processor.fetch_data_between(PV_PRODUCTION, date_start, date_end)
+    load_data = data_fetcher.fetch_data_between(TOTAL_LOAD, date_start, date_end)
+    wind_data = data_fetcher.fetch_data_between(WIND_PRODUCTION, date_start, date_end)
+    solar_data = data_fetcher.fetch_data_between(PV_PRODUCTION, date_start, date_end)
     
     print(f"=== Energy Dashboard: {date_start} to {date_end} ===")
     

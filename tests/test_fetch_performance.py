@@ -11,19 +11,19 @@ def test_single_batch_performance():
     """Test performance of fetching a single batch of 100 records."""
     print("\n=== Single Batch Performance Test ===")
     
-    processor = EliaDataFetcher(return_type="json")
+    data_fetcher = EliaDataFetcher(return_type="json")
     
     # Record start time
     start_time = time.time()
     
     # Use the underlying client to get 100 records directly
-    records = processor.client.get_records(
+    records = data_fetcher.client.get_records(
         IMBALANCE_PRICES_PER_QH_HIST,
         limit=100
     )
     print(records)
-    # Format the output using the processor's format method
-    result = processor._format_output(records)
+    # Format the output using the data_fetcher's format method
+    result = data_fetcher._format_output(records)
     
     # Record end time
     end_time = time.time()
@@ -59,7 +59,7 @@ def test_pagination_performance():
     """Test performance of pagination from 2025-01-01 to 2025-01-07."""
     print("\n=== Pagination Performance Test ===")
     
-    processor = EliaDataFetcher(return_type="json")
+    data_fetcher = EliaDataFetcher(return_type="json")
     
     # Date range: one week in January 2025
     # start_date = datetime(2025, 1, 1)
@@ -73,7 +73,7 @@ def test_pagination_performance():
     # Use fetch_data_between which handles pagination automatically
     print(f"Fetching data from {start_date} to {end_date}")
     
-    result = processor.fetch_data_between(
+    result = data_fetcher.fetch_data_between(
         IMBALANCE_PRICES_PER_QH_HIST,
         start_date=start_date,
         end_date=end_date,

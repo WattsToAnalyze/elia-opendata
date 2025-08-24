@@ -18,20 +18,20 @@ Example:
     from elia_opendata.dataset_catalog import TOTAL_LOAD
 
     # JSON output (default)
-    processor = EliaDataFetcher()
-    data = processor.fetch_current_value(TOTAL_LOAD)
+    data_fetcher = EliaDataFetcher()
+    data = data_fetcher.fetch_current_value(TOTAL_LOAD)
     print(type(data))  # <class 'list'>
 
     # Pandas DataFrame output
-    processor = EliaDataFetcher(return_type="pandas")
-    df = processor.fetch_current_value(TOTAL_LOAD)
+    data_fetcher = EliaDataFetcher(return_type="pandas")
+    df = data_fetcher.fetch_current_value(TOTAL_LOAD)
     print(type(df))  # <class 'pandas.core.frame.DataFrame'>
 
     # Date range query
     from datetime import datetime
     start = datetime(2023, 1, 1)
     end = datetime(2023, 1, 31)
-    monthly_data = processor.fetch_data_between(TOTAL_LOAD, start, end)
+    monthly_data = data_fetcher.fetch_data_between(TOTAL_LOAD, start, end)
     ```
 """
 from typing import Optional, Any, Union, List
@@ -49,13 +49,13 @@ logger = logging.getLogger(__name__)
 
 
 class EliaDataFetcher:
-    """High-level data processor for Elia OpenData datasets.
+    """High-level data fetcher for Elia OpenData datasets.
 
     This class provides convenient methods for fetching and processing data
     from the Elia OpenData API. It supports multiple output formats and handles
     common data retrieval patterns automatically.
 
-    The processor can return data in three formats:
+    The data fetcher can return data in three formats:
     - JSON: Raw list of dictionaries (default)
     - Pandas: pandas.DataFrame for data analysis
     - Polars: polars.DataFrame for high-performance data processing
@@ -69,8 +69,8 @@ class EliaDataFetcher:
         Basic usage:
 
         ```python
-        processor = EliaDataFetcher()
-        current_data = processor.fetch_current_value("ods001")
+        data_fetcher = EliaDataFetcher()
+        current_data = data_fetcher.fetch_current_value("ods001")
         ```
 
         With custom client and return type:
@@ -78,8 +78,8 @@ class EliaDataFetcher:
         ```python
         from elia_opendata.client import EliaClient
         client = EliaClient(api_key="your_key")
-        processor = EliaDataFetcher(client=client, return_type="pandas")
-        df = processor.fetch_current_value("ods032")
+        data_fetcher = EliaDataFetcher(client=client, return_type="pandas")
+        df = data_fetcher.fetch_current_value("ods032")
         print(df.head())
         ```
 
@@ -89,7 +89,7 @@ class EliaDataFetcher:
         from datetime import datetime
         start = datetime(2023, 1, 1)
         end = datetime(2023, 1, 31)
-        data = processor.fetch_data_between("ods001", start, end)
+        data = data_fetcher.fetch_data_between("ods001", start, end)
         ```
     """
 
@@ -98,7 +98,7 @@ class EliaDataFetcher:
         client: Optional[EliaClient] = None,
         return_type: str = "json"
     ):
-        """Initialize the data processor.
+        """Initialize the data fetcher.
 
         Args:
             client: EliaClient instance for making API requests. If None,
@@ -116,7 +116,7 @@ class EliaDataFetcher:
             Default initialization:
 
             ```python
-            processor = EliaDataFetcher()
+            data_fetcher = EliaDataFetcher()
             ```
 
             With custom client:
@@ -124,13 +124,13 @@ class EliaDataFetcher:
             ```python
             from elia_opendata.client import EliaClient
             client = EliaClient(api_key="your_key", timeout=60)
-            processor = EliaDataFetcher(client=client)
+            data_fetcher = EliaDataFetcher(client=client)
             ```
 
             With pandas output:
 
             ```python
-            processor = EliaDataFetcher(return_type="pandas")
+            data_fetcher = EliaDataFetcher(return_type="pandas")
             ```
         """
         self.client = client or EliaClient()
@@ -171,15 +171,15 @@ class EliaDataFetcher:
 
             ```python
             from elia_opendata.dataset_catalog import TOTAL_LOAD
-            processor = EliaDataFetcher()
-            current = processor.fetch_current_value(TOTAL_LOAD)
+            data_fetcher = EliaDataFetcher()
+            current = data_fetcher.fetch_current_value(TOTAL_LOAD)
             print(current[0]['datetime'])  # Most recent timestamp
             ```
 
             With filtering:
 
             ```python
-            current_measured = processor.fetch_current_value(
+            current_measured = data_fetcher.fetch_current_value(
                 TOTAL_LOAD,
                 where="type='measured'"
             )
@@ -188,8 +188,8 @@ class EliaDataFetcher:
             As pandas DataFrame:
 
             ```python
-            processor = EliaDataFetcher(return_type="pandas")
-            df = processor.fetch_current_value(TOTAL_LOAD)
+            data_fetcher = EliaDataFetcher(return_type="pandas")
+            df = data_fetcher.fetch_current_value(TOTAL_LOAD)
             print(df.iloc[0]['value'])  # Most recent value
             ```
         """
@@ -259,17 +259,17 @@ class EliaDataFetcher:
             ```python
             from datetime import datetime
             from elia_opendata.dataset_catalog import TOTAL_LOAD
-            processor = EliaDataFetcher()
+            data_fetcher = EliaDataFetcher()
             start = datetime(2023, 1, 1)
             end = datetime(2023, 1, 31)
-            data = processor.fetch_data_between(TOTAL_LOAD, start, end)
+            data = data_fetcher.fetch_data_between(TOTAL_LOAD, start, end)
             print(f"Retrieved {len(data)} records")
             ```
 
             Using export endpoint for large datasets:
 
             ```python
-            data = processor.fetch_data_between(
+            data = data_fetcher.fetch_data_between(
                 TOTAL_LOAD,
                 start,
                 end,
@@ -280,7 +280,7 @@ class EliaDataFetcher:
             With string dates:
 
             ```python
-            data = processor.fetch_data_between(
+            data = data_fetcher.fetch_data_between(
                 TOTAL_LOAD,
                 "2023-01-01",
                 "2023-01-31"
@@ -290,7 +290,7 @@ class EliaDataFetcher:
             With additional filtering:
 
             ```python
-            measured_data = processor.fetch_data_between(
+            measured_data = data_fetcher.fetch_data_between(
                 TOTAL_LOAD,
                 start,
                 end,
@@ -302,8 +302,8 @@ class EliaDataFetcher:
             As pandas DataFrame:
 
             ```python
-            processor = EliaDataFetcher(return_type="pandas")
-            df = processor.fetch_data_between(TOTAL_LOAD, start, end)
+            data_fetcher = EliaDataFetcher(return_type="pandas")
+            df = data_fetcher.fetch_data_between(TOTAL_LOAD, start, end)
             print(df.describe())  # Statistical summary
             ```
         """
@@ -445,7 +445,7 @@ class EliaDataFetcher:
         """Format the output according to the specified return type.
 
         This private method converts the raw list of record dictionaries
-        into the format specified by the processor's return_type setting.
+        into the format specified by the data fetcher's return_type setting.
 
         Args:
             records: List of record dictionaries from the API response.

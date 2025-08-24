@@ -14,8 +14,8 @@ Basic usage:
     data = client.get_records("ods032", limit=100)
 
     # Advanced data processing
-    processor = EliaDataFetcher(client)
-    complete_data = processor.fetch_current_value("ods032")
+    data_fetcher = EliaDataFetcher(client)
+    complete_data = data_fetcher.fetch_current_value("ods032")
     ```
 
 Full documentation is available at [docs link].

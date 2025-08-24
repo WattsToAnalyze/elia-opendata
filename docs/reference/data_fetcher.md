@@ -1,4 +1,4 @@
-# Data Processor API Reference
+# Data Fetcher API Reference
 
 The `EliaDataFetcher` class provides high-level data processing capabilities for working with Elia OpenData datasets.
 
