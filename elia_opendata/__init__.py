@@ -23,7 +23,7 @@ Full documentation is available at [docs link].
 
 from .client import EliaClient
 from .error import EliaError, RateLimitError, AuthError
-from .data_processor import EliaDataFetcher
+from .data_fetcher import EliaDataFetcher
 
 __version__ = "1.0.1"
 __author__ = "WattsToAnalyze"

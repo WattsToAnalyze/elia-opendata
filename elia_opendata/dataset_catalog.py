@@ -26,7 +26,7 @@ Example:
 
     ```python
     from elia_opendata.dataset_catalog import *
-    from elia_opendata.data_processor import EliaDataFetcher
+    from elia_opendata.data_fetcher import EliaDataFetcher
 
     processor = EliaDataFetcher(return_type="pandas")
     wind_df = processor.fetch_current_value(WIND_POWER_PRODUCTION_FORECAST_HISTORICAL)

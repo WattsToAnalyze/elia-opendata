@@ -1,7 +1,6 @@
-"""Data processing utilities for Elia OpenData API.
+"""Data fetching utilities for Elia OpenData API.
 
-This module provides high-level data processing capabilities for working with
-This module provides high-level data processing capabilities for working with
+This module provides high-level data fetching capabilities for working with
 Elia OpenData datasets. It offers convenient methods for fetching and
 formatting data from the API, with support for multiple output formats
 including JSON, Pandas DataFrames, and Polars DataFrames.
@@ -15,7 +14,7 @@ Example:
     Basic usage with different return types:
 
     ```python
-    from elia_opendata.data_processor import EliaDataFetcher
+    from elia_opendata.data_fetcher import EliaDataFetcher
     from elia_opendata.dataset_catalog import TOTAL_LOAD
 
     # JSON output (default)

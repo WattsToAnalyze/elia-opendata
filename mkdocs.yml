@@ -12,7 +12,7 @@ nav:
   - Examples: examples.md
   - API Reference:
     - Client: reference/client.md
-    - Data Processor: reference/data_processor.md
+    - Data Processor: reference/data_fetcher.md
     - Dataset Catalog: reference/dataset_catalog.md
     - Exceptions: reference/error.md
 

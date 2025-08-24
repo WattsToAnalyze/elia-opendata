@@ -1,13 +1,13 @@
 """
-Unit tests for the Elia OpenData data processor.
+Unit tests for the Elia OpenData data fetcher.
 """
 from datetime import datetime
 import pandas as pd
-from elia_opendata.data_processor import EliaDataFetcher, DATE_FORMAT
+from elia_opendata.data_fetcher import EliaDataFetcher, DATE_FORMAT
 from elia_opendata.client import EliaClient
 
 
-def test_data_processor_initialization():
+def test_data_fetcher_initialization():
     """Test data processor initialization."""
     # Test with default values
     processor = EliaDataFetcher()

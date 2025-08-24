@@ -3,8 +3,8 @@ Performance tests for the Elia OpenData API client.
 """
 import time
 from datetime import datetime, timedelta
-from elia_opendata.data_processor import EliaDataFetcher
-from elia_opendata.dataset_catalog import IMBALANCE_PRICES_QH
+from elia_opendata.data_fetcher import EliaDataFetcher
+from elia_opendata.dataset_catalog import IMBALANCE_PRICES_PER_QH_HIST
 
 
 def test_single_batch_performance():
@@ -18,7 +18,7 @@ def test_single_batch_performance():
     
     # Use the underlying client to get 100 records directly
     records = processor.client.get_records(
-        IMBALANCE_PRICES_QH,
+        IMBALANCE_PRICES_PER_QH_HIST,
         limit=100
     )
     print(records)
@@ -74,7 +74,7 @@ def test_pagination_performance():
     print(f"Fetching data from {start_date} to {end_date}")
     
     result = processor.fetch_data_between(
-        IMBALANCE_PRICES_QH,
+        IMBALANCE_PRICES_PER_QH_HIST,
         start_date=start_date,
         end_date=end_date,
         limit=100  # Batch size of 100

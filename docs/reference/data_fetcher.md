@@ -2,4 +2,4 @@
 
 The `EliaDataFetcher` class provides high-level data processing capabilities for working with Elia OpenData datasets.
 
-::: elia_opendata.data_processor.EliaDataFetcher
+::: elia_opendata.data_fetcher.EliaDataFetcher
