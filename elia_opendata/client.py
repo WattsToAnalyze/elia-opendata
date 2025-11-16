@@ -193,6 +193,7 @@ class EliaClient:
     def export(
         self,
         dataset_id: str,
+        select: Optional[str] = None,
         limit: Optional[int] = None,
         where: Optional[str] = None,
         export_format: str = "json",
@@ -208,6 +209,7 @@ class EliaClient:
             dataset_id: The unique identifier for the dataset to export.
                 Examples include "ods032" for PV production data or "ods001"
                 for total load data.
+            select: Comma-separated list of fields to include in the export.
             limit: Maximum number of records to export. If None, exports
                 all available records in the dataset.
             where: Filter expression in OData format to limit results.
@@ -294,6 +296,8 @@ class EliaClient:
             params['where'] = where
         if limit is not None:
             params['limit'] = limit
+        if select is not None:
+            params['select'] = select
 
         # Add optional parameters with defaults
         params.update({
