@@ -235,6 +235,7 @@ class EliaDataProcessor:
                   bulk data retrieval. If False (default), uses pagination.
                 - where: Additional filter conditions (combined with date
                   filter)
+                - select: Comma-separated fields to retrieve
                 - limit: Batch size for pagination (default: 100) or maximum
                   records for export
                 - order_by: Sort order for results
