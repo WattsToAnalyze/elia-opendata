@@ -155,6 +155,11 @@ class EliaClient:
         if where is not None:
             params["where"] = where
 
+        if "order_by" in kwargs:
+            params["order_by"] = kwargs["order_by"]
+        if "select" in kwargs:
+            params["select"] = kwargs["select"]
+
         default_params = {
             'timezone': 'UTC',
             'include_links': 'false',

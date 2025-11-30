@@ -198,11 +198,10 @@ class EliaDataProcessor:
 
         # Get the most recent record by limiting to 1 and ordering by
         # datetime desc
-        kwargs["limit"] = 1
         if "order_by" not in kwargs:
-            kwargs["order_by"] = "-datetime desc"
+            kwargs["order_by"] = "datetime desc"
 
-        records = self.client.get_records(dataset_id, **kwargs)
+        records = self.client.get_records(dataset_id,  limit=1, **kwargs)
 
         return self._format_output(records)
 
