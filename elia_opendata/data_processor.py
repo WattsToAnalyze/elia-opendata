@@ -200,7 +200,7 @@ class EliaDataProcessor:
         # datetime desc
         kwargs["limit"] = 1
         if "order_by" not in kwargs:
-            kwargs["order_by"] = "-datetime"
+            kwargs["order_by"] = "-datetime desc"
 
         records = self.client.get_records(dataset_id, **kwargs)
 
