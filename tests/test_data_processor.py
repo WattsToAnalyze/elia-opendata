@@ -33,14 +33,14 @@ def test_date_format_constant():
 def test_date_formatting_conversion():
     """Test that datetime objects are converted to the correct date format."""
     # Test datetime formatting
-    test_date = datetime(2024, 1, 15)
+    test_date = datetime(2025, 1, 15)
     formatted = test_date.strftime(DATE_FORMAT)
-    assert formatted == "2024-01-15"
+    assert formatted == "2025-01-15"
 
     # Test edge cases
-    edge_date = datetime(2023, 12, 31)
+    edge_date = datetime(2025, 12, 31)
     formatted_edge = edge_date.strftime(DATE_FORMAT)
-    assert formatted_edge == "2023-12-31"
+    assert formatted_edge == "2025-12-31"
 
 
 def test_export_data_parameter_default():

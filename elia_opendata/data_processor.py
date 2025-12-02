@@ -30,8 +30,8 @@ Example:
 
     # Date range query
     from datetime import datetime
-    start = datetime(2023, 1, 1)
-    end = datetime(2023, 1, 31)
+    start = datetime(2025, 1, 1)
+    end = datetime(2025, 1, 31)
     monthly_data = processor.fetch_data_between(TOTAL_LOAD, start, end)
     ```
 """
@@ -43,8 +43,10 @@ import pandas as pd
 import polars as pl
 
 from .client import EliaClient
+from .dataset_catalog import DATASET_NAME_MAPPING
 
 DATE_FORMAT = "%Y-%m-%d"
+MARI_TRANSITION_DATE = datetime(2024, 5, 22)
 
 logger = logging.getLogger(__name__)
 
@@ -88,8 +90,8 @@ class EliaDataProcessor:
 
         ```python
         from datetime import datetime
-        start = datetime(2023, 1, 1)
-        end = datetime(2023, 1, 31)
+        start = datetime(2025, 1, 1)
+        end = datetime(2025, 1, 31)
         data = processor.fetch_data_between("ods001", start, end)
         ```
     """
@@ -207,12 +209,15 @@ class EliaDataProcessor:
 
     def fetch_data_between(
         self,
-        dataset_id: str,
         start_date: Union[str, datetime],
         end_date: Union[str, datetime],
+        dataset_id: Optional[str] = None,
+        dataset_name: Optional[str] = None,
         **kwargs
     ) -> Any:
         """Fetch data between two dates with automatic pagination.
+
+        Includes automatic MARI transition handling for imbalance datasets.
 
         This method retrieves all records from the specified dataset within
         the given date range. It supports two modes:
@@ -220,15 +225,26 @@ class EliaDataProcessor:
            pagination
         2. Export mode: Uses the bulk export endpoint for large datasets
 
+        For datasets with MARI transition (imbalance-related datasets),
+        this method automatically handles the transition date (May 22,
+        2024) by selecting the appropriate dataset ID(s) or merging data
+        from both pre-MARI and post-MARI datasets when the date range
+        spans the transition.
+
         Args:
-            dataset_id: Unique identifier for the dataset to query. Use
-                constants from dataset_catalog module.
             start_date: Start date for the query range. Can be either:
                 - datetime object
-                - ISO date string (e.g., "2023-01-01")
+                - ISO date string (e.g., "2025-01-01")
             end_date: End date for the query range. Can be either:
                 - datetime object
-                - ISO date string (e.g., "2023-01-31")
+                - ISO date string (e.g., "2025-01-31")
+            dataset_id: Unique identifier for the dataset to query. Use
+                constants from dataset_catalog module. Optional if dataset_name
+                is provided.
+            dataset_name: Friendly name for datasets with MARI transition.
+                If provided, automatically selects the correct dataset ID(s)
+                based on the date range. Examples: "IMBALANCE_PRICES_QH",
+                "SYSTEM_IMBALANCE". Takes precedence over dataset_id.
             **kwargs: Additional query parameters:
                 - export_data (bool): If True, uses the export endpoint for
                   bulk data retrieval. If False (default), uses pagination.
@@ -238,7 +254,6 @@ class EliaDataProcessor:
                 - limit: Batch size for pagination (default: 100) or maximum
                   records for export
                 - order_by: Sort order for results
-                - select: Comma-separated fields to retrieve
                 - Any other API-supported parameters
 
         Returns:
@@ -246,6 +261,10 @@ class EliaDataProcessor:
             - If return_type="json": List of dictionaries
             - If return_type="pandas": pandas.DataFrame
             - If return_type="polars": polars.DataFrame
+
+        Raises:
+            ValueError: If both dataset_id and dataset_name are None, or if
+                dataset_name is not found in DATASET_NAME_MAPPING.
 
         Note:
             For large date ranges (>10,000 records), consider setting
@@ -255,14 +274,41 @@ class EliaDataProcessor:
             - Parquet for pandas/polars return_types
 
         Example:
-            Fetch data for January 2023:
+            Using dataset_name with MARI transition handling:
 
             ```python
             from datetime import datetime
+            processor = EliaDataProcessor()
+            
+            # Query before MARI - automatically uses PRE_MARI dataset
+            data = processor.fetch_data_between(
+                dataset_name="IMBALANCE_PRICES_QH",
+                start_date=datetime(2025, 1, 1),
+                end_date=datetime(2025, 3, 31)
+            )
+            
+            # Query after MARI - automatically uses POST_MARI dataset
+            data = processor.fetch_data_between(
+                dataset_name="IMBALANCE_PRICES_QH",
+                start_date=datetime(2025, 6, 1),
+                end_date=datetime(2025, 6, 30)
+            )
+            
+            # Query spanning MARI - automatically merges both datasets
+            data = processor.fetch_data_between(
+                dataset_name="IMBALANCE_PRICES_QH",
+                start_date=datetime(2025, 4, 1),
+                end_date=datetime(2025, 5, 31)
+            )
+            ```
+
+            Traditional usage with dataset_id:
+
+            ```python
             from elia_opendata.dataset_catalog import TOTAL_LOAD
             processor = EliaDataProcessor()
-            start = datetime(2023, 1, 1)
-            end = datetime(2023, 1, 31)
+            start = datetime(2025, 1, 1)
+            end = datetime(2025, 1, 31)
             data = processor.fetch_data_between(TOTAL_LOAD, start, end)
             print(f"Retrieved {len(data)} records")
             ```
@@ -277,52 +323,142 @@ class EliaDataProcessor:
                 export_data=True
             )
             ```
-
-            With string dates:
-
-            ```python
-            data = processor.fetch_data_between(
-                TOTAL_LOAD,
-                "2023-01-01",
-                "2023-01-31"
-            )
-            ```
-
-            With additional filtering:
-
-            ```python
-            measured_data = processor.fetch_data_between(
-                TOTAL_LOAD,
-                start,
-                end,
-                where="type='measured'",
-                limit=500  # Larger batch size
-            )
-            ```
-
-            As pandas DataFrame:
-
-            ```python
-            processor = EliaDataProcessor(return_type="pandas")
-            df = processor.fetch_data_between(TOTAL_LOAD, start, end)
-            print(df.describe())  # Statistical summary
-            ```
         """
+        # Validate that at least one of dataset_id or dataset_name is provided
+        if dataset_id is None and dataset_name is None:
+            raise ValueError(
+                "Either dataset_id or dataset_name must be provided"
+            )
 
+        # Convert string dates to datetime objects for comparison
+        if isinstance(start_date, str):
+            start_dt = datetime.fromisoformat(start_date)
+        else:
+            start_dt = start_date
+
+        if isinstance(end_date, str):
+            end_dt = datetime.fromisoformat(end_date)
+        else:
+            end_dt = end_date
+
+        # Process timing info - convert to string format for API calls
         if isinstance(start_date, datetime):
-            start_date = start_date.strftime(DATE_FORMAT)
+            start_date_str = start_date.strftime(DATE_FORMAT)
+        else:
+            start_date_str = start_date
 
         if isinstance(end_date, datetime):
-            end_date = end_date.strftime(DATE_FORMAT)
+            end_date_str = end_date.strftime(DATE_FORMAT)
+        else:
+            end_date_str = end_date
 
-        logger.debug(
-            "Fetching data for dataset %s between %s and %s",
-            dataset_id, start_date, end_date
-        )
+        # Handle dataset_name if provided (takes precedence)
+        if dataset_name is not None:
+            if dataset_name not in DATASET_NAME_MAPPING:
+                raise ValueError(
+                    f"Dataset name '{dataset_name}' not found in "
+                    f"DATASET_NAME_MAPPING. Available names: "
+                    f"{list(DATASET_NAME_MAPPING.keys())}"
+                )
 
+            logger.debug(
+                "Using dataset_name '%s' with MARI transition handling",
+                dataset_name
+            )
+
+            # Get the dataset mapping
+            dataset_mapping = DATASET_NAME_MAPPING[dataset_name]
+            pre_mari_id = dataset_mapping["pre_mari"]
+            post_mari_id = dataset_mapping["post_mari"]
+
+            # Case 1: Both dates are before the MARI transition
+            if end_dt < MARI_TRANSITION_DATE:
+                logger.debug(
+                    "Date range is entirely before MARI transition, "
+                    "using PRE_MARI dataset: %s", pre_mari_id
+                )
+                return self._fetch_data_for_period(
+                    pre_mari_id, start_date_str, end_date_str, **kwargs
+                )
+
+            # Case 2: Both dates are on or after the transition
+            if start_dt >= MARI_TRANSITION_DATE:
+                logger.debug(
+                    "Date range is entirely after MARI transition, "
+                    "using POST_MARI dataset: %s", post_mari_id
+                )
+                return self._fetch_data_for_period(
+                    post_mari_id, start_date_str, end_date_str, **kwargs
+                )
+
+            # Case 3: Date range spans the transition
+            # Fetch from both and merge
+            logger.debug(
+                "Date range spans MARI transition, fetching from both datasets"
+            )
+
+            # Fetch pre-MARI data (from start_date to day before transition)
+            transition_date_minus_one = MARI_TRANSITION_DATE - pd.Timedelta(days=1)
+            pre_mari_end = transition_date_minus_one.strftime(DATE_FORMAT)
+            
+            logger.debug(
+                "Fetching pre-MARI data from %s to %s using dataset %s",
+                start_date_str, pre_mari_end, pre_mari_id
+            )
+            pre_mari_data = self._fetch_data_for_period(
+                pre_mari_id, start_date_str, pre_mari_end, **kwargs
+            )
+
+            # Fetch post-MARI data (from transition date to end_date)
+            mari_transition_str = MARI_TRANSITION_DATE.strftime(DATE_FORMAT)
+            
+            logger.debug(
+                "Fetching post-MARI data from %s to %s using dataset %s",
+                mari_transition_str, end_date_str, post_mari_id
+            )
+            post_mari_data = self._fetch_data_for_period(
+                post_mari_id, mari_transition_str, end_date_str, **kwargs
+            )
+
+            # Merge the results based on return type
+            return self._merge_data(pre_mari_data, post_mari_data)
+
+        # Use dataset_id if dataset_name is not provided
+        else:
+            if dataset_id is None:
+                raise ValueError(
+                    "dataset_id must be provided when dataset_name is not used"
+                )
+            else:
+                logger.debug(
+                    "Fetching data for dataset %s between %s and %s",
+                    dataset_id, start_date_str, end_date_str
+                )
+                return self._fetch_data_for_period(
+                    dataset_id, start_date_str, end_date_str, **kwargs
+                )
+
+    def _fetch_data_for_period(
+        self,
+        dataset_id: str,
+        start_date_str: str,
+        end_date_str: str,
+        **kwargs
+    ) -> Any:
+        """Internal method to fetch data for a specific period.
+
+        Args:
+            dataset_id: Unique identifier for the dataset to query.
+            start_date_str: Start date as string in DATE_FORMAT.
+            end_date_str: End date as string in DATE_FORMAT.
+            **kwargs: Additional query parameters.
+
+        Returns:
+            Formatted data according to return_type.
+        """
         # Build the date filter condition
         where_condition = (
-            f"datetime IN [date'{start_date}'..date'{end_date}']"
+            f"datetime IN [date'{start_date_str}'..date'{end_date_str}']"
         )
         if "where" in kwargs:
             kwargs["where"] = f"({kwargs['where']}) AND ({where_condition})"
@@ -433,7 +569,7 @@ class EliaDataProcessor:
             return self._format_output(records)
 
         if export_format == "parquet":
-            # For parquet, we need to read the bytes and convert            
+            # For parquet, we need to read the bytes and convert
             if self.return_type == "pandas":
                 return pd.read_parquet(io.BytesIO(exported_data))
 
@@ -441,6 +577,50 @@ class EliaDataProcessor:
                 return pl.read_parquet(io.BytesIO(exported_data))
 
         return exported_data
+
+    def _merge_data(self, pre_mari_data: Any, post_mari_data: Any) -> Any:
+        """Merge pre-MARI and post-MARI datasets.
+
+        This private method combines data from both datasets according to
+        the return_type setting.
+
+        Args:
+            pre_mari_data: Data from the pre-MARI dataset.
+            post_mari_data: Data from the post-MARI dataset.
+
+        Returns:
+            Merged data in the format specified by return_type:
+            - If return_type="json": Concatenated list
+            - If return_type="pandas": Concatenated DataFrame
+            - If return_type="polars": Concatenated DataFrame
+
+        Raises:
+            ValueError: If the return_type is not supported.
+        """
+        if self.return_type == "json":
+            # Simply concatenate the lists
+            return pre_mari_data + post_mari_data
+
+        elif self.return_type == "pandas":
+            # Concatenate pandas DataFrames
+            if pre_mari_data.empty:
+                return post_mari_data
+            if post_mari_data.empty:
+                return pre_mari_data
+            return pd.concat(
+                [pre_mari_data, post_mari_data], ignore_index=True
+            )
+
+        elif self.return_type == "polars":
+            # Concatenate polars DataFrames
+            if pre_mari_data.is_empty():
+                return post_mari_data
+            if post_mari_data.is_empty():
+                return pre_mari_data
+            return pl.concat([pre_mari_data, post_mari_data])
+
+        else:
+            raise ValueError(f"Unsupported return type: {self.return_type}")
 
     def _format_output(self, records: List[dict]) -> Any:
         """Format the output according to the specified return type.
