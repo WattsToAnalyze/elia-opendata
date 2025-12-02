@@ -3,7 +3,7 @@ Simple tests for the Elia OpenData API client.
 """
 import responses
 from elia_opendata.client import EliaClient
-from elia_opendata.dataset_catalog import IMBALANCE_PRICES_REALTIME
+from elia_opendata.dataset_catalog import REALTIME_IMBALANCE_PRICES_QH
 
 
 def test_client_initialization():
@@ -55,7 +55,7 @@ def test_get_records():
 
     # Mock the API endpoint
     base_url = EliaClient.BASE_URL
-    endpoint = f"catalog/datasets/{IMBALANCE_PRICES_REALTIME}/records"
+    endpoint = f"catalog/datasets/{REALTIME_IMBALANCE_PRICES_QH}/records"
     dataset_url = f"{base_url}{endpoint}"
     responses.add(
         responses.GET,
@@ -66,7 +66,7 @@ def test_get_records():
 
     # Test the get_records method
     client = EliaClient()
-    result = client.get_records(IMBALANCE_PRICES_REALTIME, limit=2)
+    result = client.get_records(REALTIME_IMBALANCE_PRICES_QH, limit=2)
     # Verify the response structure matches actual API
     assert isinstance(result, list)
     assert len(result) == 2
