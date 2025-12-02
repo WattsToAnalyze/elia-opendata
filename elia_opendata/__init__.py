@@ -22,7 +22,7 @@ Full documentation is available at [docs link].
 """
 
 from .client import EliaClient
-from .error import EliaError, RateLimitError, AuthError
+from .error import RateLimitError, APIError
 from .data_processor import EliaDataProcessor
 
 __version__ = "1.0.2"
@@ -31,7 +31,6 @@ __author__ = "WattsToAnalyze"
 __all__ = [
     'EliaClient',
     'EliaDataProcessor',
-    'EliaError',
     'RateLimitError',
-    'AuthError',
+    'APIError',
 ]
