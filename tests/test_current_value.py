@@ -6,7 +6,7 @@ import pytz
 import pandas as pd
 from elia_opendata.data_processor import EliaDataProcessor, DATE_FORMAT
 from elia_opendata.client import EliaClient
-from elia_opendata.dataset_catalog import IMBALANCE_PRICES_REALTIME
+from elia_opendata.dataset_catalog import REALTIME_IMBALANCE_PRICES_MIN
 
 
 def test_current_imbalance_fetching():
@@ -17,8 +17,8 @@ def test_current_imbalance_fetching():
 
     processor = EliaDataProcessor(return_type="pandas")
 
-    df = processor.fetch_current_value(IMBALANCE_PRICES_REALTIME)
-
+    df = processor.fetch_current_value(REALTIME_IMBALANCE_PRICES_MIN)
+    print(df)
     assert isinstance(df, pd.DataFrame)
     
     now = datetime.now(pytz.utc)
