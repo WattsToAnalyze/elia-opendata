@@ -41,7 +41,7 @@ Example:
 
     start = datetime(2023, 1, 1)
     end = datetime(2023, 1, 31)
-    data = processor.fetch_data_between(SYSTEM_IMBALANCE, start, end)
+    data = processor.fetch_data_between(start, end, dataset_id=SYSTEM_IMBALANCE)
     ```
 
 Note:

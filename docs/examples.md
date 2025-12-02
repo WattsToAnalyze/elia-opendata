@@ -39,7 +39,7 @@ import pandas as pd
 start = datetime(2023, 6, 1)
 end = datetime(2023, 6, 30)
 
-june_load = processor.fetch_data_between(TOTAL_LOAD, start, end, export_data=True)
+june_load = processor.fetch_data_between(start, end, dataset_id=TOTAL_LOAD, export_data=True)
 
 # Convert datetime column and set as index
 june_load['datetime'] = pd.to_datetime(june_load['datetime'])
@@ -73,9 +73,9 @@ from elia_opendata.dataset_catalog import PV_PRODUCTION
 # Get solar data for analysis
 processor = EliaDataProcessor(return_type="pandas")
 solar_data = processor.fetch_data_between(
-    PV_PRODUCTION,
     datetime(2023, 7, 1),
-    datetime(2023, 7, 7)  # One week of data
+    datetime(2023, 7, 7),  # One week of data
+    dataset_id=PV_PRODUCTION
 )
 
 # Analyze the solar production data structure
@@ -119,9 +119,9 @@ from elia_opendata.dataset_catalog import TOTAL_LOAD, WIND_PRODUCTION, PV_PRODUC
 start = datetime(2023, 8, 1)
 end = datetime(2023, 8, 7)
 
-total_load = processor.fetch_data_between(TOTAL_LOAD, start, end)
-wind_prod = processor.fetch_data_between(WIND_PRODUCTION, start, end)
-solar_prod = processor.fetch_data_between(PV_PRODUCTION, start, end)
+total_load = processor.fetch_data_between(start, end, dataset_id=TOTAL_LOAD)
+wind_prod = processor.fetch_data_between(start, end, dataset_id=WIND_PRODUCTION)
+solar_prod = processor.fetch_data_between(start, end, dataset_id=PV_PRODUCTION)
 
 print("Data structure check:")
 print(f"Total load columns: {total_load.columns.tolist()}")
@@ -173,9 +173,9 @@ from elia_opendata.dataset_catalog import IMBALANCE_PRICES_QH
 
 # Get imbalance price data
 imbalance_data = processor.fetch_data_between(
-    IMBALANCE_PRICES_QH,
     datetime(2025, 1, 1),
-    datetime(2025, 2, 1), 
+    datetime(2025, 2, 1),
+    dataset_id=IMBALANCE_PRICES_QH,
     export_data=True
 )
 
@@ -208,9 +208,9 @@ def energy_dashboard(date_start, date_end):
     processor = EliaDataProcessor(return_type="pandas")
     
     # Fetch all major datasets
-    load_data = processor.fetch_data_between(TOTAL_LOAD, date_start, date_end)
-    wind_data = processor.fetch_data_between(WIND_PRODUCTION, date_start, date_end)
-    solar_data = processor.fetch_data_between(PV_PRODUCTION, date_start, date_end)
+    load_data = processor.fetch_data_between(date_start, date_end, dataset_id=TOTAL_LOAD)
+    wind_data = processor.fetch_data_between(date_start, date_end, dataset_id=WIND_PRODUCTION)
+    solar_data = processor.fetch_data_between(date_start, date_end, dataset_id=PV_PRODUCTION)
     
     print(f"=== Energy Dashboard: {date_start} to {date_end} ===")
     

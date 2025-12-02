@@ -54,7 +54,7 @@ current_pv = processor.fetch_current_value(PV_PRODUCTION)
 # Get data for a specific date range
 start_date = datetime(2023, 1, 1)
 end_date = datetime(2023, 1, 31)
-january_data = processor.fetch_data_between(TOTAL_LOAD, start_date, end_date)
+january_data = processor.fetch_data_between(start_date, end_date, dataset_id=TOTAL_LOAD)
 ```
 
 ## Available Data
