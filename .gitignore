@@ -1,6 +1,7 @@
 # Custom
 secrets.yml
 release_guidelines.md
+misc.py
 
 # MkDocs
 site/
