@@ -36,8 +36,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 # Get data for a specific month
-start = datetime(2023, 6, 1)
-end = datetime(2023, 6, 30)
+start = datetime(2025, 6, 1)
+end = datetime(2025, 6, 30)
 
 june_load = processor.fetch_data_between(start, end, dataset_id=TOTAL_LOAD, export_data=True)
 
@@ -54,7 +54,7 @@ print(f"Minimum load in June: {june_load['totalload'].min():.2f} MW")
 # Plot the data
 plt.figure(figsize=(12, 6))
 plt.plot(june_load.index, june_load['totalload'])
-plt.title('Total Load - June 2023')
+plt.title('Total Load - June 2025')
 plt.ylabel('Load (MW)')
 plt.xticks(rotation=45)
 plt.tight_layout()
@@ -73,8 +73,8 @@ from elia_opendata.dataset_catalog import PV_PRODUCTION
 # Get solar data for analysis
 processor = EliaDataProcessor(return_type="pandas")
 solar_data = processor.fetch_data_between(
-    datetime(2023, 7, 1),
-    datetime(2023, 7, 7),  # One week of data
+    datetime(2025, 7, 1),
+    datetime(2025, 7, 7),  # One week of data
     dataset_id=PV_PRODUCTION
 )
 
@@ -116,8 +116,8 @@ Compare renewable production with total electricity demand:
 from elia_opendata.dataset_catalog import TOTAL_LOAD, WIND_PRODUCTION, PV_PRODUCTION
 
 # Fetch all data for the same time period
-start = datetime(2023, 8, 1)
-end = datetime(2023, 8, 7)
+start = datetime(2025, 8, 1)
+end = datetime(2025, 8, 7)
 
 total_load = processor.fetch_data_between(start, end, dataset_id=TOTAL_LOAD)
 wind_prod = processor.fetch_data_between(start, end, dataset_id=WIND_PRODUCTION)
@@ -260,7 +260,7 @@ def energy_dashboard(date_start, date_end):
     print("=" * 50)
 
 # Use the dashboard
-energy_dashboard(datetime(2023, 7, 1), datetime(2023, 7, 7))
+energy_dashboard(datetime(2025, 7, 1), datetime(2025, 7, 7))
 ```
 
 These examples cover the most common use cases for the Elia OpenData package. For more specific scenarios, check the [API Reference](reference/client.md) for detailed parameter documentation.

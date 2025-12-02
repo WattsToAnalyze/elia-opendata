@@ -39,8 +39,8 @@ Example:
     from datetime import datetime
     from elia_opendata.dataset_catalog import SYSTEM_IMBALANCE
 
-    start = datetime(2023, 1, 1)
-    end = datetime(2023, 1, 31)
+    start = datetime(2025, 1, 1)
+    end = datetime(2025, 1, 31)
     data = processor.fetch_data_between(start, end, dataset_id=SYSTEM_IMBALANCE)
     ```
 

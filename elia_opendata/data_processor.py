@@ -30,8 +30,8 @@ Example:
 
     # Date range query
     from datetime import datetime
-    start = datetime(2023, 1, 1)
-    end = datetime(2023, 1, 31)
+    start = datetime(2025, 1, 1)
+    end = datetime(2025, 1, 31)
     monthly_data = processor.fetch_data_between(TOTAL_LOAD, start, end)
     ```
 """
@@ -90,8 +90,8 @@ class EliaDataProcessor:
 
         ```python
         from datetime import datetime
-        start = datetime(2023, 1, 1)
-        end = datetime(2023, 1, 31)
+        start = datetime(2025, 1, 1)
+        end = datetime(2025, 1, 31)
         data = processor.fetch_data_between("ods001", start, end)
         ```
     """
@@ -284,22 +284,22 @@ class EliaDataProcessor:
             # Query before MARI - automatically uses PRE_MARI dataset
             data = processor.fetch_data_between(
                 dataset_name="IMBALANCE_PRICES_QH",
-                start_date=datetime(2024, 1, 1),
-                end_date=datetime(2024, 3, 31)
+                start_date=datetime(2025, 1, 1),
+                end_date=datetime(2025, 3, 31)
             )
             
             # Query after MARI - automatically uses POST_MARI dataset
             data = processor.fetch_data_between(
                 dataset_name="IMBALANCE_PRICES_QH",
-                start_date=datetime(2024, 6, 1),
-                end_date=datetime(2024, 6, 30)
+                start_date=datetime(2025, 6, 1),
+                end_date=datetime(2025, 6, 30)
             )
             
             # Query spanning MARI - automatically merges both datasets
             data = processor.fetch_data_between(
                 dataset_name="IMBALANCE_PRICES_QH",
-                start_date=datetime(2024, 4, 1),
-                end_date=datetime(2024, 5, 31)
+                start_date=datetime(2025, 4, 1),
+                end_date=datetime(2025, 5, 31)
             )
             ```
 
