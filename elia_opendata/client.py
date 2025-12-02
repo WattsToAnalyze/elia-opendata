@@ -18,17 +18,13 @@ Example:
     ```
 
 """
+
 import logging
 from typing import Dict, List, Optional, Any, NoReturn
 from urllib.parse import urljoin
 
 import requests
-from .error import (
-    RateLimitError,
-    AuthError,
-    APIError,
-    ConnectionError as EliaConnectionError,
-)
+from .error import APIError, RateLimitError
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -61,10 +57,7 @@ class EliaClient:
 
     BASE_URL = "https://opendata.elia.be/api/explore/v2.1/"
 
-    def __init__(
-        self,
-        timeout: int = 30
-    ) -> None:
+    def __init__(self, timeout: int = 30) -> None:
         """Initialize the Elia API client.
 
         Args:
@@ -81,7 +74,7 @@ class EliaClient:
         limit: Optional[int] = None,
         offset: Optional[int] = None,
         where: Optional[str] = None,
-        **kwargs
+        **kwargs,
     ) -> List[Dict[str, Any]]:
         """Get records from a specific dataset.
 
@@ -142,9 +135,7 @@ class EliaClient:
         """
         url = urljoin(self.BASE_URL, f"catalog/datasets/{dataset_id}/records")
 
-        headers = {
-            "accept": "application/json; charset=utf-8"
-        }
+        headers = {"accept": "application/json; charset=utf-8"}
 
         # Build parameters
         params: Dict[str, Any] = {}
@@ -155,27 +146,29 @@ class EliaClient:
         if where is not None:
             params["where"] = where
 
+        if "order_by" in kwargs:
+            params["order_by"] = kwargs["order_by"]
+        if "select" in kwargs:
+            params["select"] = kwargs["select"]
+
         default_params = {
-            'timezone': 'UTC',
-            'include_links': 'false',
-            'include_app_metas': 'false',
+            "timezone": "UTC",
+            "include_links": "false",
+            "include_app_metas": "false",
         }
 
         params.update(default_params)
 
         try:
 
-            req = requests.Request('GET', url, params=params, headers=headers)
+            req = requests.Request("GET", url, params=params, headers=headers)
             prepared = req.prepare()
 
             # Print the exact URL being used
             logger.debug(f"Requesting: {prepared.url}")
 
             response = requests.get(
-                url,
-                params=params,
-                headers=headers,
-                timeout=self.timeout
+                url, params=params, headers=headers, timeout=self.timeout
             )
 
             response.raise_for_status()
@@ -183,12 +176,14 @@ class EliaClient:
             raw_data = response.json()
 
             records = raw_data.get("results")
+
             return records
 
         except requests.exceptions.HTTPError as e:
             self._handle_http_error(e)
+
         except requests.exceptions.RequestException as e:
-            raise EliaConnectionError(f"Connection failed: {str(e)}") from e
+            raise APIError(f"Connection failed: {str(e)}") from e
 
     def export(
         self,
@@ -197,7 +192,7 @@ class EliaClient:
         limit: Optional[int] = None,
         where: Optional[str] = None,
         export_format: str = "json",
-        **kwargs: Any
+        **kwargs: Any,
     ) -> Any:
         """Export dataset records in a specific format.
 
@@ -273,13 +268,9 @@ class EliaClient:
 
         # Build the export URL based on format
         if export_format == "json":
-            url = urljoin(
-                self.BASE_URL, f"catalog/datasets/{dataset_id}/exports/json"
-            )
+            url = urljoin(self.BASE_URL, f"catalog/datasets/{dataset_id}/exports/json")
         elif export_format == "csv":
-            url = urljoin(
-                self.BASE_URL, f"catalog/datasets/{dataset_id}/exports/csv"
-            )
+            url = urljoin(self.BASE_URL, f"catalog/datasets/{dataset_id}/exports/csv")
         elif export_format == "parquet":
             url = urljoin(
                 self.BASE_URL, f"catalog/datasets/{dataset_id}/exports/parquet"
@@ -293,20 +284,22 @@ class EliaClient:
         # Build parameters, filtering out None values
         params: Dict[str, Any] = {}
         if where is not None:
-            params['where'] = where
+            params["where"] = where
         if limit is not None:
-            params['limit'] = limit
+            params["limit"] = limit
         if select is not None:
-            params['select'] = select
+            params["select"] = select
 
         # Add optional parameters with defaults
-        params.update({
-            'lang': kwargs.get('lang', 'en'),
-            'timezone': kwargs.get('timezone', 'UTC'),
-            'use_labels': kwargs.get('use_labels', 'false'),
-            'compressed': kwargs.get('compressed', 'false'),
-            'epsg': kwargs.get('epsg', 4326)
-        })
+        params.update(
+            {
+                "lang": kwargs.get("lang", "en"),
+                "timezone": kwargs.get("timezone", "UTC"),
+                "use_labels": kwargs.get("use_labels", "false"),
+                "compressed": kwargs.get("compressed", "false"),
+                "epsg": kwargs.get("epsg", 4326),
+            }
+        )
 
         try:
             response = requests.get(url, params=params, timeout=self.timeout)
@@ -322,7 +315,7 @@ class EliaClient:
         except requests.exceptions.HTTPError as e:
             self._handle_http_error(e)
         except requests.exceptions.RequestException as e:
-            raise EliaConnectionError(f"Connection failed: {str(e)}") from e
+            raise APIError(f"Connection failed: {str(e)}") from e
 
     def _handle_http_error(self, e: requests.exceptions.HTTPError) -> NoReturn:
         """Handle HTTP errors and raise appropriate custom exceptions.
@@ -348,14 +341,6 @@ class EliaClient:
         """
         response = e.response
         if response.status_code == 429:
-            raise RateLimitError(
-                "API rate limit exceeded", response=response
-            ) from e
-        elif response.status_code == 401:
-            raise AuthError(
-                "Authentication failed", response=response
-            ) from e
+            raise RateLimitError("API rate limit exceeded", response=response) from e
         else:
-            raise APIError(
-                f"API request failed: {str(e)}", response=response
-            ) from e
+            raise APIError(f"API request failed: {str(e)}", response=response) from e
