@@ -2,6 +2,7 @@
 Simple tests for the Elia OpenData API client.
 """
 import responses
+
 from elia_opendata.client import EliaClient
 from elia_opendata.dataset_catalog import REALTIME_IMBALANCE_PRICES_QH
 

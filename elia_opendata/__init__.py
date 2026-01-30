@@ -18,12 +18,12 @@ Basic usage:
     complete_data = processor.fetch_current_value("ods032")
     ```
 
-Full documentation is available at [docs link].
+Full documentation is available at https://wattstoanalyze.github.io/elia-opendata/.
 """
 
 from .client import EliaClient
-from .error import RateLimitError, APIError
 from .data_processor import EliaDataProcessor
+from .error import APIError, RateLimitError
 
 __version__ = "1.1.0"
 __author__ = "WattsToAnalyze"

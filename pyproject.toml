@@ -27,7 +27,7 @@ test = [
     "pytest>=7.0.0",
     "responses>=0.23.0",
     "pytest-cov>=4.0.0",
-    "flake8>=6.0.0",
+    "ruff>=0.4.0",
     "mypy>=1.0.0",
     "types-requests>=2.25.0",
     "pandas-stubs>=2.0.0",
@@ -44,3 +44,15 @@ docs = [
     "ipykernel>=6.0.0",
     "matplotlib>=3.5.0"
 ]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+extend-exclude = ["*.ipynb"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true

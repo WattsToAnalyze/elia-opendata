@@ -7,7 +7,7 @@
 
 This package provides a Python interface to the Elia OpenData API, allowing users to easily access and process data related to electricity consumption, production, and other metrics from Elia, the Belgian transmission system operator.
 
-The package includes functionality to fetch data for specific datasets, filter by date ranges, and handle the data in a flexible manner, allowing for both raw JSON based data and more user-friendly dataframees using `pandas` or `polars`.
+The package includes functionality to fetch data for specific datasets, filter by date ranges, and handle the data in a flexible manner, allowing for both raw JSON based data and more user-friendly dataframes using `pandas` or `polars`.
 
 The package is in active development and we would love your feedback! If you encounter any issues or have suggestions, please open an issue on our [GitHub repository](https://github.com/WattsToAnalyze/elia-opendata/issues).
 

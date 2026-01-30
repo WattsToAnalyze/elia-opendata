@@ -20,10 +20,11 @@ Example:
 """
 
 import logging
-from typing import Dict, List, Optional, Any, NoReturn
+from typing import Any, Dict, List, NoReturn, Optional, cast
 from urllib.parse import urljoin
 
 import requests
+
 from .error import APIError, RateLimitError
 
 # Configure logging
@@ -74,7 +75,7 @@ class EliaClient:
         limit: Optional[int] = None,
         offset: Optional[int] = None,
         where: Optional[str] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> List[Dict[str, Any]]:
         """Get records from a specific dataset.
 
@@ -102,10 +103,8 @@ class EliaClient:
         Raises:
             APIError: If the API request fails due to server error, invalid
                 dataset ID, or malformed query parameters.
-            AuthError: If authentication is required but invalid/missing
-                API key is provided.
             RateLimitError: If API rate limits are exceeded.
-            EliaConnectionError: If network connection fails or times out.
+            APIError: For network failures or non-HTTP errors.
 
         Example:
             Basic usage:
@@ -175,9 +174,9 @@ class EliaClient:
 
             raw_data = response.json()
 
-            records = raw_data.get("results")
+            records = raw_data.get("results", [])
 
-            return records
+            return cast(List[Dict[str, Any]], records)
 
         except requests.exceptions.HTTPError as e:
             self._handle_http_error(e)
@@ -231,10 +230,8 @@ class EliaClient:
             ValueError: If an unsupported export format is specified.
             APIError: If the API request fails due to server error, invalid
                 dataset ID, or malformed query parameters.
-            AuthError: If authentication is required but invalid/missing
-                API key is provided.
             RateLimitError: If API rate limits are exceeded.
-            EliaConnectionError: If network connection fails or times out.
+            APIError: For network failures or non-HTTP errors.
 
         Example:
             Basic JSON export:
@@ -330,8 +327,6 @@ class EliaClient:
         Raises:
             RateLimitError: If the response status code is 429 (Too Many
                 Requests), indicating API rate limits have been exceeded.
-            AuthError: If the response status code is 401 (Unauthorized),
-                indicating authentication failure or invalid API key.
             APIError: For all other HTTP error status codes, wrapping the
                 original error with additional context.
 

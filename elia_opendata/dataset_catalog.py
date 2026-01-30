@@ -14,12 +14,17 @@ Example:
     Import specific dataset constants:
 
     ```python
-    from elia_opendata.dataset_catalog import TOTAL_LOAD, IMBALANCE_PRICES_QH  # noqa: E501
+    from elia_opendata.dataset_catalog import (
+        TOTAL_LOAD,
+        IMBALANCE_PRICES_QH_POST_MARI,
+    )
     from elia_opendata.client import EliaClient
 
     client = EliaClient()
     load_data = client.get_records(TOTAL_LOAD, limit=10)
-    price_data = client.get_records(IMBALANCE_PRICES_QH, limit=10)
+    price_data = client.get_records(IMBALANCE_PRICES_QH_POST_MARI, limit=10)
+
+    # Use IMBALANCE_PRICES_QH_PRE_MARI for data before 2024-05-22
     ```
 
     Import all constants:
@@ -37,11 +42,17 @@ Example:
 
     ```python
     from datetime import datetime
-    from elia_opendata.dataset_catalog import SYSTEM_IMBALANCE
+    from elia_opendata.dataset_catalog import SYSTEM_IMBALANCE_POST_MARI
 
     start = datetime(2025, 1, 1)
     end = datetime(2025, 1, 31)
-    data = processor.fetch_data_between(start, end, dataset_id=SYSTEM_IMBALANCE)
+    data = processor.fetch_data_between(
+        start,
+        end,
+        dataset_id=SYSTEM_IMBALANCE_POST_MARI,
+    )
+
+    # Use SYSTEM_IMBALANCE_PRE_MARI for data before 2024-05-22
     ```
 
 Note:
