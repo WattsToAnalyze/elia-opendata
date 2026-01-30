@@ -2,9 +2,11 @@
 Unit tests for the Elia OpenData data processor.
 """
 from datetime import datetime
+
 import pandas as pd
-from elia_opendata.data_processor import EliaDataProcessor, DATE_FORMAT
+
 from elia_opendata.client import EliaClient
+from elia_opendata.data_processor import DATE_FORMAT, EliaDataProcessor
 
 
 def test_data_processor_initialization():

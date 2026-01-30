@@ -1,7 +1,6 @@
 """Data processing utilities for Elia OpenData API.
 
 This module provides high-level data processing capabilities for working with
-This module provides high-level data processing capabilities for working with
 Elia OpenData datasets. It offers convenient methods for fetching and
 formatting data from the API, with support for multiple output formats
 including JSON, Pandas DataFrames, and Polars DataFrames.
@@ -32,13 +31,14 @@ Example:
     from datetime import datetime
     start = datetime(2025, 1, 1)
     end = datetime(2025, 1, 31)
-    monthly_data = processor.fetch_data_between(TOTAL_LOAD, start, end)
+    monthly_data = processor.fetch_data_between(start, end, dataset_id=TOTAL_LOAD)
     ```
 """
-from typing import Optional, Any, Union, List
-from datetime import datetime
-import logging
 import io
+import logging
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Union
+
 import pandas as pd
 import polars as pl
 
@@ -72,17 +72,21 @@ class EliaDataProcessor:
         Basic usage:
 
         ```python
+        from elia_opendata.dataset_catalog import TOTAL_LOAD
+
         processor = EliaDataProcessor()
-        current_data = processor.fetch_current_value("ods001")
+        current_data = processor.fetch_current_value(TOTAL_LOAD)
         ```
 
         With custom client and return type:
 
         ```python
         from elia_opendata.client import EliaClient
+        from elia_opendata.dataset_catalog import PV_PRODUCTION
+
         client = EliaClient(api_key="your_key")
         processor = EliaDataProcessor(client=client, return_type="pandas")
-        df = processor.fetch_current_value("ods032")
+        df = processor.fetch_current_value(PV_PRODUCTION)
         print(df.head())
         ```
 
@@ -90,9 +94,11 @@ class EliaDataProcessor:
 
         ```python
         from datetime import datetime
+        from elia_opendata.dataset_catalog import TOTAL_LOAD
+
         start = datetime(2025, 1, 1)
         end = datetime(2025, 1, 31)
-        data = processor.fetch_data_between("ods001", start, end)
+        data = processor.fetch_data_between(start, end, dataset_id=TOTAL_LOAD)
         ```
     """
 
@@ -147,7 +153,7 @@ class EliaDataProcessor:
     def fetch_current_value(
         self,
         dataset_id: str,
-        **kwargs
+        **kwargs: Any,
     ) -> Any:
         """Fetch the most recent value from a dataset.
 
@@ -213,7 +219,7 @@ class EliaDataProcessor:
         end_date: Union[str, datetime],
         dataset_id: Optional[str] = None,
         dataset_name: Optional[str] = None,
-        **kwargs
+        **kwargs: Any,
     ) -> Any:
         """Fetch data between two dates with automatic pagination.
 
@@ -309,7 +315,7 @@ class EliaDataProcessor:
             processor = EliaDataProcessor()
             start = datetime(2025, 1, 1)
             end = datetime(2025, 1, 31)
-            data = processor.fetch_data_between(TOTAL_LOAD, start, end)
+            data = processor.fetch_data_between(start, end, dataset_id=TOTAL_LOAD)
             print(f"Retrieved {len(data)} records")
             ```
 
@@ -317,9 +323,9 @@ class EliaDataProcessor:
 
             ```python
             data = processor.fetch_data_between(
-                TOTAL_LOAD,
                 start,
                 end,
+                dataset_id=TOTAL_LOAD,
                 export_data=True
             )
             ```
@@ -443,7 +449,7 @@ class EliaDataProcessor:
         dataset_id: str,
         start_date_str: str,
         end_date_str: str,
-        **kwargs
+        **kwargs: Any,
     ) -> Any:
         """Internal method to fetch data for a specific period.
 
@@ -476,7 +482,7 @@ class EliaDataProcessor:
     def _fetch_via_pagination(
         self,
         dataset_id: str,
-        **kwargs
+        **kwargs: Any,
     ) -> Any:
         """Fetch data using pagination through the records endpoint.
 
@@ -488,7 +494,7 @@ class EliaDataProcessor:
             Formatted data according to return_type.
         """
         # Fetch all records with pagination
-        all_records = []
+        all_records: List[Dict[str, Any]] = []
         offset = 0
         # Remove limit from kwargs to avoid duplication
         limit = kwargs.pop("limit", 100)
@@ -526,7 +532,7 @@ class EliaDataProcessor:
     def _fetch_via_export(
         self,
         dataset_id: str,
-        **kwargs
+        **kwargs: Any,
     ) -> Any:
         """Fetch data using the export endpoint.
 
@@ -622,7 +628,7 @@ class EliaDataProcessor:
         else:
             raise ValueError(f"Unsupported return type: {self.return_type}")
 
-    def _format_output(self, records: List[dict]) -> Any:
+    def _format_output(self, records: List[Dict[str, Any]]) -> Any:
         """Format the output according to the specified return type.
 
         This private method converts the raw list of record dictionaries

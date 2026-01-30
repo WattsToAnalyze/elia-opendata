@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "elia_opendata"
-version = "1.1.0"
+version = "1.1.1"
 description = "Python Client for Elia Open Data"
 authors = [
     { name="WattsToAnalyze" }
@@ -12,25 +12,25 @@ authors = [
 readme = "README.md"
 license = { text = "MIT" }
 dependencies = [
-    "requests>=2.25.0",
-    "pandas>=2.0.0",
-    "numpy>=1.24.0",
+    "requests>=2.31.0",
+    "pandas>=2.2.0",
+    "numpy>=1.26.0",
     "polars>=0.20.0",
     "pyarrow>=14.0.1"
 
 ]
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 
 [project.optional-dependencies]
 
 test = [
-    "pytest>=7.0.0",
+    "pytest>=8.0.0",
     "responses>=0.23.0",
     "pytest-cov>=4.0.0",
-    "flake8>=6.0.0",
+    "ruff>=0.4.0",
     "mypy>=1.0.0",
     "types-requests>=2.25.0",
-    "pandas-stubs>=2.0.0",
+    "pandas-stubs>=2.2.0",
     "types-pytz>=2023.0.0"
 ]
 docs = [
@@ -44,3 +44,15 @@ docs = [
     "ipykernel>=6.0.0",
     "matplotlib>=3.5.0"
 ]
+
+[tool.ruff]
+line-length = 88
+target-version = "py39"
+extend-exclude = ["*.ipynb"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.mypy]
+python_version = "3.9"
+strict = true

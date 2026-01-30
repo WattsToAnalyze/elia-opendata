@@ -2,6 +2,7 @@
 Performance tests for the Elia OpenData API client.
 """
 import time
+
 from elia_opendata.data_processor import EliaDataProcessor
 from elia_opendata.dataset_catalog import IMBALANCE_PRICES_QH_POST_MARI
 

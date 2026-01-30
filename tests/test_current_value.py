@@ -2,10 +2,11 @@
 Unit tests for the Elia OpenData data processor.
 """
 from datetime import datetime
-import pytz
+
 import pandas as pd
-from elia_opendata.data_processor import EliaDataProcessor, DATE_FORMAT
-from elia_opendata.client import EliaClient
+import pytz
+
+from elia_opendata.data_processor import EliaDataProcessor
 from elia_opendata.dataset_catalog import REALTIME_IMBALANCE_PRICES_MIN
 
 

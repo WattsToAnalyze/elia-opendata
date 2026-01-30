@@ -34,6 +34,11 @@ Analyze patterns in electricity consumption:
 from datetime import datetime
 import matplotlib.pyplot as plt
 import pandas as pd
+from elia_opendata import EliaDataProcessor
+from elia_opendata.dataset_catalog import TOTAL_LOAD
+
+# Create processor with pandas output for analysis
+processor = EliaDataProcessor(return_type="pandas")
 
 # Get data for a specific month
 start = datetime(2025, 6, 1)
@@ -68,6 +73,9 @@ plt.show()
 Analyze solar production with forecasts:
 
 ```python
+from datetime import datetime
+import pandas as pd
+from elia_opendata import EliaDataProcessor
 from elia_opendata.dataset_catalog import PV_PRODUCTION
 
 # Get solar data for analysis
@@ -113,7 +121,12 @@ print(f"Average daily production: {measured_solar['measured'].mean():.2f} MW per
 Compare renewable production with total electricity demand:
 
 ```python
+from datetime import datetime
+from elia_opendata import EliaDataProcessor
 from elia_opendata.dataset_catalog import TOTAL_LOAD, WIND_PRODUCTION, PV_PRODUCTION
+
+# Create processor with pandas output for analysis
+processor = EliaDataProcessor(return_type="pandas")
 
 # Fetch all data for the same time period
 start = datetime(2025, 8, 1)
@@ -169,15 +182,20 @@ if not wind_prod.empty and not solar_prod.empty and not total_load.empty:
 Analyze electricity market imbalance prices:
 
 ```python
-from elia_opendata.dataset_catalog import IMBALANCE_PRICES_QH
+from datetime import datetime
+from elia_opendata import EliaDataProcessor
+from elia_opendata.dataset_catalog import IMBALANCE_PRICES_QH_POST_MARI
 
 # Get imbalance price data
+processor = EliaDataProcessor(return_type="pandas")
 imbalance_data = processor.fetch_data_between(
     datetime(2025, 1, 1),
     datetime(2025, 2, 1),
-    dataset_id=IMBALANCE_PRICES_QH,
+    dataset_id=IMBALANCE_PRICES_QH_POST_MARI,
     export_data=True
 )
+
+# Use IMBALANCE_PRICES_QH_PRE_MARI for data before 2024-05-22
 
 # Basic price statistics
 prices = imbalance_data['systemimbalance']  # System imbalance price
@@ -195,6 +213,27 @@ print(f"Hours with positive prices: {len(positive_prices)} ({len(positive_prices
 print(f"Hours with negative prices: {len(negative_prices)} ({len(negative_prices)/len(prices)*100:.1f}%)")
 ```
 
+### MARI Transition Handling (Pre/Post 2024-05-22)
+
+Use `dataset_name` to automatically select the correct dataset or merge across
+the transition date:
+
+```python
+from datetime import datetime
+from elia_opendata import EliaDataProcessor
+
+processor = EliaDataProcessor(return_type="pandas")
+
+imbalance_data = processor.fetch_data_between(
+    start_date=datetime(2024, 4, 1),
+    end_date=datetime(2024, 6, 1),
+    dataset_name="IMBALANCE_PRICES_QH",
+)
+```
+
+If you need explicit datasets, use the catalog constants `IMBALANCE_PRICES_QH_PRE_MARI`
+or `IMBALANCE_PRICES_QH_POST_MARI` from the dataset catalog.
+
 ## Data Export and Visualization
 
 ### Creating Dashboards
@@ -202,6 +241,10 @@ print(f"Hours with negative prices: {len(negative_prices)} ({len(negative_prices
 Simple dashboard-style analysis:
 
 ```python
+from datetime import datetime
+from elia_opendata import EliaDataProcessor
+from elia_opendata.dataset_catalog import TOTAL_LOAD, WIND_PRODUCTION, PV_PRODUCTION
+
 def energy_dashboard(date_start, date_end):
     """Create a simple energy dashboard for a date range."""
     

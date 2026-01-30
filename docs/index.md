@@ -57,6 +57,28 @@ end_date = datetime(2025, 1, 31)
 january_data = processor.fetch_data_between(start_date, end_date, dataset_id=TOTAL_LOAD)
 ```
 
+## MARI Transition Datasets (Pre/Post 2024-05-22)
+
+Some balancing datasets were split when MARI/ICAROS went live on 2024-05-22.
+You can:
+
+- Use `dataset_name` to automatically select PRE/POST datasets for the date
+	range (or merge across the transition).
+- Use the explicit `*_PRE_MARI` and `*_POST_MARI` constants when needed.
+
+```python
+from datetime import datetime
+from elia_opendata import EliaDataProcessor
+
+processor = EliaDataProcessor()
+
+data = processor.fetch_data_between(
+		start_date=datetime(2024, 4, 1),
+		end_date=datetime(2024, 6, 1),
+		dataset_name="IMBALANCE_PRICES_QH",
+)
+```
+
 ## Available Data
 
 The Elia OpenData API provides access to various categories of electricity grid data:
