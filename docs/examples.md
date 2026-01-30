@@ -213,6 +213,27 @@ print(f"Hours with positive prices: {len(positive_prices)} ({len(positive_prices
 print(f"Hours with negative prices: {len(negative_prices)} ({len(negative_prices)/len(prices)*100:.1f}%)")
 ```
 
+### MARI Transition Handling (Pre/Post 2024-05-22)
+
+Use `dataset_name` to automatically select the correct dataset or merge across
+the transition date:
+
+```python
+from datetime import datetime
+from elia_opendata import EliaDataProcessor
+
+processor = EliaDataProcessor(return_type="pandas")
+
+imbalance_data = processor.fetch_data_between(
+    start_date=datetime(2024, 4, 1),
+    end_date=datetime(2024, 6, 1),
+    dataset_name="IMBALANCE_PRICES_QH",
+)
+```
+
+If you need explicit datasets, use the catalog constants `IMBALANCE_PRICES_QH_PRE_MARI`
+or `IMBALANCE_PRICES_QH_POST_MARI` from the dataset catalog.
+
 ## Data Export and Visualization
 
 ### Creating Dashboards

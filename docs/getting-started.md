@@ -38,3 +38,24 @@ pip install https://github.com/WattsToAnalyze/elia-opendata/releases/download/<T
 - Explore the [Examples](examples.md) section for common use cases
 - Check the [API Reference](reference/client.md) for detailed documentation
 - Browse available datasets in the [Dataset Catalog](reference/dataset_catalog.md)
+
+## MARI Transition Datasets (Pre/Post 2024-05-22)
+
+Balancing datasets were split when MARI/ICAROS went live on 2024-05-22.
+For these datasets, you can use a friendly `dataset_name` to automatically
+select PRE/POST datasets (or merge across the transition).
+
+```python
+from datetime import datetime
+from elia_opendata import EliaDataProcessor
+
+processor = EliaDataProcessor()
+data = processor.fetch_data_between(
+	start_date=datetime(2024, 4, 1),
+	end_date=datetime(2024, 6, 1),
+	dataset_name="IMBALANCE_PRICES_QH",
+)
+```
+
+If you prefer explicit datasets, use the `*_PRE_MARI` and `*_POST_MARI`
+constants from the dataset catalog.

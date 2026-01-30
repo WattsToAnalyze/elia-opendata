@@ -72,17 +72,21 @@ class EliaDataProcessor:
         Basic usage:
 
         ```python
+        from elia_opendata.dataset_catalog import TOTAL_LOAD
+
         processor = EliaDataProcessor()
-        current_data = processor.fetch_current_value("ods001")
+        current_data = processor.fetch_current_value(TOTAL_LOAD)
         ```
 
         With custom client and return type:
 
         ```python
         from elia_opendata.client import EliaClient
+        from elia_opendata.dataset_catalog import PV_PRODUCTION
+
         client = EliaClient(api_key="your_key")
         processor = EliaDataProcessor(client=client, return_type="pandas")
-        df = processor.fetch_current_value("ods032")
+        df = processor.fetch_current_value(PV_PRODUCTION)
         print(df.head())
         ```
 
@@ -90,9 +94,11 @@ class EliaDataProcessor:
 
         ```python
         from datetime import datetime
+        from elia_opendata.dataset_catalog import TOTAL_LOAD
+
         start = datetime(2025, 1, 1)
         end = datetime(2025, 1, 31)
-        data = processor.fetch_data_between(start, end, dataset_id="ods001")
+        data = processor.fetch_data_between(start, end, dataset_id=TOTAL_LOAD)
         ```
     """
 

@@ -13,7 +13,9 @@ Example:
     ```python
     from elia_opendata.client import EliaClient
     client = EliaClient()
-    data = client.get_records("ods032", limit=100)
+    from elia_opendata.dataset_catalog import PV_PRODUCTION
+
+    data = client.get_records(PV_PRODUCTION, limit=100)
     print(f"Retrieved {len(data)} records")
     ```
 
@@ -51,7 +53,9 @@ class EliaClient:
 
         ```python
         client = EliaClient()
-        data = client.get_records("ods032", limit=100)
+        from elia_opendata.dataset_catalog import PV_PRODUCTION
+
+        data = client.get_records(PV_PRODUCTION, limit=100)
         ```
 
     """
@@ -84,8 +88,8 @@ class EliaClient:
 
         Args:
             dataset_id: The unique identifier for the dataset to query.
-                Examples include "ods032" for PV production data or "ods001"
-                for total load data.
+                Use constants from dataset_catalog (e.g., PV_PRODUCTION,
+                TOTAL_LOAD).
             limit: Maximum number of records to return in a single request.
                 If None, the API default limit applies (typically 10).
                 Maximum value is usually 10000 per request.
@@ -110,15 +114,19 @@ class EliaClient:
             Basic usage:
 
             ```python
+            from elia_opendata.dataset_catalog import PV_PRODUCTION
+
             client = EliaClient()
-            data = client.get_records("ods032", limit=100)
+            data = client.get_records(PV_PRODUCTION, limit=100)
             ```
 
             With filtering:
 
             ```python
+            from elia_opendata.dataset_catalog import TOTAL_LOAD
+
             filtered_data = client.get_records(
-                "ods001",
+                TOTAL_LOAD,
                 where="datetime>='2023-01-01' AND datetime<'2023-02-01'",
                 limit=1000,
                 order_by="datetime"
@@ -128,8 +136,10 @@ class EliaClient:
             Pagination:
 
             ```python
-            page1 = client.get_records("ods032", limit=50, offset=0)
-            page2 = client.get_records("ods032", limit=50, offset=50)
+            from elia_opendata.dataset_catalog import PV_PRODUCTION
+
+            page1 = client.get_records(PV_PRODUCTION, limit=50, offset=0)
+            page2 = client.get_records(PV_PRODUCTION, limit=50, offset=50)
             ```
         """
         url = urljoin(self.BASE_URL, f"catalog/datasets/{dataset_id}/records")
@@ -201,8 +211,8 @@ class EliaClient:
 
         Args:
             dataset_id: The unique identifier for the dataset to export.
-                Examples include "ods032" for PV production data or "ods001"
-                for total load data.
+                Use constants from dataset_catalog (e.g., PV_PRODUCTION,
+                TOTAL_LOAD).
             select: Comma-separated list of fields to include in the export.
             limit: Maximum number of records to export. If None, exports
                 all available records in the dataset.
@@ -237,15 +247,18 @@ class EliaClient:
             Basic JSON export:
 
             ```python
+            from elia_opendata.dataset_catalog import PV_PRODUCTION, TOTAL_LOAD
+
             client = EliaClient()
-            data = client.export("ods032", limit=1000)
+
+            data = client.export(PV_PRODUCTION, limit=1000)
             ```
 
             CSV export with filtering:
 
             ```python
             csv_data = client.export(
-                "ods001",
+                TOTAL_LOAD,
                 where="datetime>='2023-01-01'",
                 export_format="csv",
                 use_labels="true"
@@ -255,8 +268,10 @@ class EliaClient:
             Parquet export:
 
             ```python
+            from elia_opendata.dataset_catalog import PV_PRODUCTION
+
             parquet_data = client.export(
-                "ods032",
+                PV_PRODUCTION,
                 export_format="parquet",
                 compressed="true"
             )
