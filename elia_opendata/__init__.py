@@ -27,7 +27,7 @@ from .client import EliaClient
 from .data_processor import EliaDataProcessor
 from .error import APIError, RateLimitError
 
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 __author__ = "WattsToAnalyze"
 
 __all__ = [
